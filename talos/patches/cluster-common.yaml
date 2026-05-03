@@ -1,0 +1,27 @@
+cluster:
+  network:
+    cni:
+      name: none
+  proxy:
+    disabled: true
+  discovery:
+    enabled: true
+machine:
+  features:
+    rbac: true
+    kubernetesTalosAPIAccess:
+      enabled: true
+      allowedRoles:
+        - os:reader
+      allowedKubernetesNamespaces:
+        - kube-system
+  network:
+    interfaces:
+      - interface: eth0
+        dhcp: true
+  install:
+    wipe: false
+  kubelet:
+    extraConfig:
+      shutdownGracePeriod: 30s
+      shutdownGracePeriodCriticalPods: 10s

@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Core platform components managed by GitOps (CNI, LB, ingress, storage, ArgoCD itself).
+  sourceRepos:
+    - "${ARGOCD_GIT_REPO}"
+    - "https://helm.cilium.io"
+    - "https://argoproj.github.io/argo-helm"
+    - "https://metallb.github.io/metallb"
+    - "https://kubernetes.github.io/ingress-nginx"
+    - "https://charts.longhorn.io"
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  orphanedResources:
+    warn: true

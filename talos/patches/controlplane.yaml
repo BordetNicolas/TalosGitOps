@@ -1,0 +1,14 @@
+machine:
+  network:
+    interfaces:
+      - interface: eth0
+        dhcp: true
+        vip:
+          ip: ${CLUSTER_ENDPOINT_VIP}
+cluster:
+  apiServer:
+    certSANs:
+      - ${CLUSTER_ENDPOINT_VIP}
+      - ${CLUSTER_NAME}
+  controllerManager: {}
+  scheduler: {}

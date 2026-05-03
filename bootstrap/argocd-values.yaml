@@ -1,0 +1,21 @@
+# Minimal ArgoCD values for the bootstrap install. The real values, including
+# the Ingress and any RBAC tweaks, live in `gitops/argocd/values.yaml` and are
+# applied once ArgoCD adopts itself via the App-of-Apps.
+configs:
+  params:
+    server.insecure: true
+
+server:
+  service:
+    type: ClusterIP
+  extraArgs:
+    - --insecure
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+applicationSet:
+  enabled: true

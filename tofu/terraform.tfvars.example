@@ -1,0 +1,53 @@
+proxmox = {
+  endpoint   = "https://pve1.lan:8006"
+  api_token  = "user@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  insecure   = true
+  node       = "pve1"
+  iso_store  = "local"
+  disk_store = "local-lvm"
+  bridge     = "vmbr0"
+}
+
+cluster = {
+  name               = "talos"
+  endpoint_vip       = "192.168.1.50"
+  talos_version      = "v1.8.4"
+  kubernetes_version = "1.31.4"
+}
+
+control_plane = {
+  count     = 3
+  cores     = 2
+  memory_mb = 4096
+  disk_gb   = 50
+}
+
+worker = {
+  count     = 3
+  cores     = 4
+  memory_mb = 8192
+  disk_gb   = 50
+  longhorn_disks = [
+    { size_gb = 100, ssd = true },
+  ]
+}
+
+metallb_pool = {
+  start = "192.168.1.60"
+  end   = "192.168.1.79"
+}
+
+argocd = {
+  git_repo_url = "https://github.com/me/talos.git"
+  git_revision = "main"
+  git_path     = "gitops"
+  ingress_host = "argocd.lan"
+}
+
+minio = {
+  endpoint          = "https://minio.lan:9000"
+  state_bucket      = "talos-tfstate"
+  state_key         = "talos-pve1/terraform.tfstate"
+  kubeconfig_bucket = "kubeconfigs"
+  kubeconfig_key    = "talos-pve1/kubeconfig"
+}

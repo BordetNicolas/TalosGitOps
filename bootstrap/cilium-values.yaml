@@ -1,0 +1,44 @@
+# Cilium values used during the initial Helm install. These MUST stay in sync
+# with `gitops/cilium/values.yaml` so that ArgoCD adopts the deployment with
+# zero drift on the next reconciliation.
+ipam:
+  mode: kubernetes
+
+kubeProxyReplacement: true
+
+# Talos-specific socket / cgroup paths.
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+
+securityContext:
+  capabilities:
+    ciliumAgent:
+      - CHOWN
+      - KILL
+      - NET_ADMIN
+      - NET_RAW
+      - IPC_LOCK
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    cleanCiliumState:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+
+# Cilium replaces kube-proxy entirely; point it at the cluster VIP since
+# kube-proxy is disabled.
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: false
+
+operator:
+  replicas: 1

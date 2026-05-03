@@ -1,0 +1,33 @@
+# Ingress that exposes the ArgoCD UI behind ingress-nginx.
+#
+# The host is stamped at `make gitops-render` time from $ARGOCD_INGRESS_HOST.
+# TLS is terminated by ingress-nginx using its default self-signed cert. To
+# replace it with a real certificate, create a TLS secret named
+# `argocd-server-tls` in the `argocd` namespace and uncomment the `tls:`
+# section below.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server
+  namespace: argocd
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: argocd.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80
+  # tls:
+  #   - hosts:
+  #       - argocd.lan
+  #     secretName: argocd-server-tls

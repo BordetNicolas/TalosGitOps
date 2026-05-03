@@ -1,0 +1,13 @@
+# Talos Image Factory schematic.
+#
+# This file documents the extensions baked into the custom Talos ISO. The
+# OpenTofu code (`tofu/iso.tf`) sends an equivalent payload to
+# https://factory.talos.dev/schematics to obtain a deterministic ID and the
+# matching ISO download URL. Keep this file in sync with var.cluster.extensions
+# in `tofu/variables.tf` so that operators can also generate the ISO manually
+# via `scripts/gen-iso.sh` if needed.
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/qemu-guest-agent
+      - siderolabs/iscsi-tools

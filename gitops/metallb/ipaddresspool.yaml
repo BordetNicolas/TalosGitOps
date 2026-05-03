@@ -1,0 +1,24 @@
+# MetalLB IPAddressPool + L2Advertisement.
+#
+# Edit the `addresses` list to match `var.metallb_pool` from terraform.tfvars.
+# This file is consumed by gitops/apps/11-metallb-config.yaml via raw manifest
+# sync.
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.1.60-192.168.1.79
+  autoAssign: true
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - default-pool
