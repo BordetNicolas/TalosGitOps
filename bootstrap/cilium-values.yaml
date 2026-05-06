@@ -31,8 +31,8 @@ securityContext:
       - SYS_ADMIN
       - SYS_RESOURCE
 
-# Cilium replaces kube-proxy entirely; point it at the cluster VIP since
-# kube-proxy is disabled.
+# Cilium replaces kube-proxy ; k8sServiceHost est injecté par bootstrap-argocd.sh
+# (output OpenTofu kubernetes_api_host, même hôte que l’endpoint talconfig).
 hubble:
   enabled: true
   relay:

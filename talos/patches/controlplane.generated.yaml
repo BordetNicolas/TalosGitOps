@@ -1,0 +1,7 @@
+cluster:
+  apiServer:
+    certSANs:
+      - 192.168.14.107
+      - talos
+  controllerManager: {}
+  scheduler: {}

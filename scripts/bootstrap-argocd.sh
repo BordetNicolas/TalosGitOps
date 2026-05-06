@@ -25,8 +25,11 @@ ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-7.7.7}"
 
 export KUBECONFIG="${KUBECONFIG_PATH}"
 
-VIP="$(echo 'var.cluster.endpoint_vip' | tofu -chdir="${TOFU_DIR}" console | tr -d '"')"
-[[ -n "$VIP" && "$VIP" != "null" ]] || die "could not read cluster.endpoint_vip from OpenTofu"
+K8S_API_HOST="$(
+  tofu -chdir="${TOFU_DIR}" output -json kubernetes_api_host | jq -r 'if . == null then "" else . end'
+)"
+[[ -n "$K8S_API_HOST" ]] ||
+  die "kubernetes_api_host (output OpenTofu) est vide : lance tofu apply pour les VMs / DHCP, ou définis cluster.kubernetes_api_host dans terraform.tfvars."
 
 # ---------------------------------------------------------------------------
 # 1) Cilium bootstrap (CNI). Without this no pod (including ArgoCD) starts.
@@ -47,7 +50,7 @@ helm upgrade --install cilium cilium/cilium \
   --namespace kube-system \
   --version "${CILIUM_CHART_VERSION}" \
   --values "${BOOTSTRAP_DIR}/cilium-values.yaml" \
-  --set k8sServiceHost="${VIP}" \
+  --set k8sServiceHost="${K8S_API_HOST}" \
   --set k8sServicePort=6443 \
   --wait \
   --timeout 10m

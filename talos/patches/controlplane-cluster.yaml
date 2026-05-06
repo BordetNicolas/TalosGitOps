@@ -1,0 +1,7 @@
+cluster:
+  apiServer:
+    certSANs:
+      - ${CLUSTER_KUBERNETES_API_HOST}
+      - ${CLUSTER_NAME}
+  controllerManager: {}
+  scheduler: {}

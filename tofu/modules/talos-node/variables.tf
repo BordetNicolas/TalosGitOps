@@ -47,6 +47,13 @@ variable "bridge" {
   type        = string
 }
 
+variable "vlan_tag" {
+  description = "802.1Q VLAN tag on this NIC (null = untagged)."
+  type        = number
+  nullable    = true
+  default     = null
+}
+
 variable "extra_disks" {
   description = <<-EOT
     Extra disks (typically dedicated to Longhorn). Each entry creates one

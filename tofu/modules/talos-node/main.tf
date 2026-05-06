@@ -36,8 +36,9 @@ resource "proxmox_virtual_environment_vm" "this" {
   }
 
   network_device {
-    bridge = var.bridge
-    model  = "virtio"
+    bridge  = var.bridge
+    model   = "virtio"
+    vlan_id = var.vlan_tag
   }
 
   cdrom {
@@ -57,9 +58,9 @@ resource "proxmox_virtual_environment_vm" "this" {
     iothread     = true
   }
 
-  # Additional Longhorn disks (workers only). The serial gives Talos a stable
-  # /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_longhorn-<n> path, which the
-  # worker.yaml patch references for formatting/mounting.
+  # Additional Longhorn disks (workers only). serial=longhorn-<n> (debug / udev).
+  # Sous PVE + virtio-scsi, Talos voit plutôt …/scsi-0QEMU_QEMU_HARDDISK_drive-scsi<N>
+  # (N = 1,2,… = scsi1,scsi2…) — cf. scripts/bootstrap.sh render_worker_patch.
   dynamic "disk" {
     for_each = { for i, d in var.extra_disks : i => d }
     content {
@@ -92,6 +93,17 @@ resource "proxmox_virtual_environment_vm" "this" {
   }
 }
 
+locals {
+  ipv4_from_guest_agent = try(
+    [
+      for addrs in proxmox_virtual_environment_vm.this.ipv4_addresses :
+      addrs[0]
+      if length(addrs) > 0 && addrs[0] != "127.0.0.1"
+    ][0],
+    null,
+  )
+}
+
 output "vm_id" {
   value = proxmox_virtual_environment_vm.this.vm_id
 }
@@ -101,13 +113,6 @@ output "name" {
 }
 
 output "ipv4_addresses" {
-  description = "First non-loopback IPv4 reported by the qemu-guest-agent (DHCP-assigned)."
-  value = try(
-    [
-      for addrs in proxmox_virtual_environment_vm.this.ipv4_addresses :
-      addrs[0]
-      if length(addrs) > 0 && addrs[0] != "127.0.0.1"
-    ][0],
-    null,
-  )
+  description = "IPv4 remontée par le qemu-guest-agent Proxmox (DHCP). Null tant que l’agent n’a pas d’IP."
+  value       = local.ipv4_from_guest_agent
 }
