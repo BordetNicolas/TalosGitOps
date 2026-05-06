@@ -2,18 +2,23 @@ output "cluster_name" {
   value = var.cluster.name
 }
 
+output "kubernetes_api_host" {
+  description = "Hôte API K8s/Talos effectif (override tfvars ou premier CP, IP DHCP / guest agent)."
+  value       = local.kubernetes_api_host_effective
+}
+
 output "cluster_endpoint" {
-  description = "Kubernetes / Talos API endpoint (the shared VIP)."
-  value       = format("https://%s:6443", var.cluster.endpoint_vip)
+  description = "URL API Kubernetes (https://hôte:6443) une fois l’hôte effectif connu."
+  value       = local.kubernetes_api_host_effective != null ? format("https://%s:6443", local.kubernetes_api_host_effective) : null
 }
 
 output "talos_endpoint" {
-  description = "Talos API endpoint."
-  value       = format("https://%s:50000", var.cluster.endpoint_vip)
+  description = "URL API Talos maintenance (même hôte que l’API Kubernetes)."
+  value       = local.kubernetes_api_host_effective != null ? format("https://%s:50000", local.kubernetes_api_host_effective) : null
 }
 
 output "control_plane_nodes" {
-  description = "Map of control-plane node name -> { vm_id, ipv4 }."
+  description = "Par nœud : vm_id, ipv4 (DHCP / qemu-guest-agent Proxmox)."
   value = {
     for k, m in module.talos_cp : k => {
       vm_id = m.vm_id
@@ -23,7 +28,7 @@ output "control_plane_nodes" {
 }
 
 output "worker_nodes" {
-  description = "Map of worker node name -> { vm_id, ipv4 }."
+  description = "Par nœud : vm_id, ipv4 (DHCP / qemu-guest-agent Proxmox)."
   value = {
     for k, m in module.talos_wk : k => {
       vm_id = m.vm_id
@@ -33,7 +38,7 @@ output "worker_nodes" {
 }
 
 output "talos_iso_id" {
-  value = proxmox_download_file.talos_iso.id
+  value = proxmox_virtual_environment_file.talos_iso.id
 }
 
 output "schematic_id" {

@@ -1,0 +1,9 @@
+# Réservé aux control-planes : Talos refuse kubernetesTalosAPIAccess sur les workers.
+machine:
+  features:
+    kubernetesTalosAPIAccess:
+      enabled: true
+      allowedRoles:
+        - os:reader
+      allowedKubernetesNamespaces:
+        - kube-system

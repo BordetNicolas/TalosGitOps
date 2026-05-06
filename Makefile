@@ -18,7 +18,9 @@
 #   tofu-publish          re-apply to push the kubeconfig into MinIO
 #   talos-config          render + apply Talos machineconfigs
 #   talos-bootstrap       run `talosctl bootstrap` + fetch kubeconfig
+#   fetch-kubeconfig      uniquement `talosctl kubeconfig` (si bootstrap OK mais pas de fichier local)
 #   argocd-bootstrap      install Cilium + ArgoCD, hand control to GitOps
+#   minio-buckets         create state + kubeconfig buckets on MinIO (if missing)
 #   upload-kubeconfig     push kubeconfig to MinIO via mc
 #   gitops-render         substitute placeholders in gitops/ from .env
 #   argo-pwd              print the initial ArgoCD admin password
@@ -39,8 +41,8 @@ export
 endif
 
 .PHONY: help up down \
-        tofu-init tofu-plan tofu-apply tofu-publish \
-        talos-config talos-bootstrap argocd-bootstrap \
+        minio-buckets tofu-init tofu-plan tofu-apply tofu-publish \
+        talos-config talos-bootstrap fetch-kubeconfig argocd-bootstrap \
         upload-kubeconfig gitops-render argo-pwd \
         status clean check-env
 
@@ -51,6 +53,9 @@ help: ## Show this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "Available targets:\n\n"} \
 		/^[a-zA-Z0-9_.-]+:.*##/ { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 }' \
 		$(MAKEFILE_LIST)
+
+minio-buckets: check-env ## Create MINIO_STATE_BUCKET and MINIO_KUBECONFIG_BUCKET on MinIO (idempotent).
+	$(ROOT_DIR)/scripts/ensure-minio-buckets.sh
 
 up: check-env tofu-init tofu-apply talos-config talos-bootstrap argocd-bootstrap upload-kubeconfig tofu-publish ## Full pipeline: VMs + Talos + ArgoCD + kubeconfig.
 	@echo "==> Cluster ready. Run 'make argo-pwd' for the ArgoCD admin password."
@@ -63,11 +68,13 @@ down: check-env ## Destroy every resource OpenTofu manages (cluster wipe).
 check-env:
 	@: $${PROXMOX_VE_ENDPOINT?missing PROXMOX_VE_ENDPOINT (check .env)}
 	@: $${AWS_ACCESS_KEY_ID?missing AWS_ACCESS_KEY_ID (check .env)}
+	@: $${AWS_SECRET_ACCESS_KEY?missing AWS_SECRET_ACCESS_KEY (check .env)}
 	@: $${MINIO_ENDPOINT?missing MINIO_ENDPOINT (check .env)}
 	@: $${MINIO_STATE_BUCKET?missing MINIO_STATE_BUCKET (check .env)}
 	@: $${MINIO_STATE_KEY?missing MINIO_STATE_KEY (check .env)}
+	@: $${MINIO_KUBECONFIG_BUCKET?missing MINIO_KUBECONFIG_BUCKET (check .env)}
 
-tofu-init: check-env ## Initialise OpenTofu with the MinIO S3 backend.
+tofu-init: check-env minio-buckets ## Initialise OpenTofu with the MinIO S3 backend.
 	tofu -chdir=$(TOFU_DIR) init -reconfigure \
 	  -backend-config="bucket=$(MINIO_STATE_BUCKET)" \
 	  -backend-config="key=$(MINIO_STATE_KEY)" \
@@ -78,11 +85,12 @@ tofu-plan: check-env ## Show planned changes.
 
 tofu-apply: check-env ## Provision Proxmox VMs (target only the talos modules so the kubeconfig publish is skipped).
 	tofu -chdir=$(TOFU_DIR) apply -auto-approve \
-	  -target='proxmox_download_file.talos_iso' \
+	  -target='null_resource.talos_iso_local' \
+	  -target='proxmox_virtual_environment_file.talos_iso' \
 	  -target='module.talos_cp' \
 	  -target='module.talos_wk'
 
-tofu-publish: check-env ## Second apply: pushes kubeconfig to MinIO via aws_s3_object.
+tofu-publish: check-env ## Second apply: exécute l'upload kubeconfig→MinIO (null_resource + scripts/upload-kubeconfig.sh).
 	tofu -chdir=$(TOFU_DIR) apply -auto-approve
 
 # ---------- Talos / ArgoCD ---------------------------------------------------
@@ -92,6 +100,9 @@ talos-config: check-env ## Render machineconfigs and push them to every node.
 
 talos-bootstrap: check-env ## Run talosctl bootstrap + fetch kubeconfig.
 	$(ROOT_DIR)/scripts/bootstrap.sh bootstrap
+
+fetch-kubeconfig: check-env ## Récupère seulement le kubeconfig ; requis pour kubectl et l'upload MinIO.
+	$(ROOT_DIR)/scripts/bootstrap.sh kubeconfig
 
 argocd-bootstrap: check-env ## Install Cilium + ArgoCD, apply the App-of-Apps.
 	$(ROOT_DIR)/scripts/bootstrap-argocd.sh
@@ -117,5 +128,7 @@ clean: ## Remove local generated files (does not touch MinIO state).
 	rm -f $(ROOT_DIR)/kubeconfig $(ROOT_DIR)/talosconfig
 	rm -f $(ROOT_DIR)/talos/talconfig.yaml \
 	      $(ROOT_DIR)/talos/patches/controlplane.generated.yaml \
+	      $(ROOT_DIR)/talos/patches/controlplane-eth-dhcp.generated.yaml \
+	      $(ROOT_DIR)/talos/patches/cluster-network.generated.yaml \
 	      $(ROOT_DIR)/talos/patches/worker.generated.yaml
 	rm -rf $(ROOT_DIR)/clusterconfig

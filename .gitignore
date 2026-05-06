@@ -10,6 +10,7 @@ tofu/*.tfstate.backup
 tofu/crash.log
 tofu/crash.*.log
 tofu/terraform.tfvars
+tofu/.cache/
 *.tfplan
 
 # Cluster artifacts (regenerated on each run, also gitignored to avoid leaking secrets)

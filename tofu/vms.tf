@@ -1,17 +1,19 @@
 locals {
-  iso_id = proxmox_download_file.talos_iso.id
+  iso_id = proxmox_virtual_environment_file.talos_iso.id
 
   control_plane_nodes = {
     for i in range(var.control_plane.count) :
     format("%s-cp-%d", var.cluster.name, i) => {
-      vm_id = var.vm_id_base + i
+      vm_id    = var.vm_id_base + i
+      cp_index = i
     }
   }
 
   worker_nodes = {
     for i in range(var.worker.count) :
     format("%s-wk-%d", var.cluster.name, i) => {
-      vm_id = var.vm_id_base + 100 + i
+      vm_id    = var.vm_id_base + 100 + i
+      wk_index = i
     }
   }
 }
@@ -28,8 +30,9 @@ module "talos_cp" {
   cores      = var.control_plane.cores
   memory_mb  = var.control_plane.memory_mb
   disk_gb    = var.control_plane.disk_gb
-  disk_store = var.proxmox.disk_store
-  bridge     = var.proxmox.bridge
+  disk_store   = var.proxmox.disk_store
+  bridge       = var.proxmox.bridge
+  vlan_tag     = try(var.proxmox.vlan_tag, null)
 
   extra_disks = []
 }
@@ -46,8 +49,9 @@ module "talos_wk" {
   cores      = var.worker.cores
   memory_mb  = var.worker.memory_mb
   disk_gb    = var.worker.disk_gb
-  disk_store = var.proxmox.disk_store
-  bridge     = var.proxmox.bridge
+  disk_store   = var.proxmox.disk_store
+  bridge       = var.proxmox.bridge
+  vlan_tag     = try(var.proxmox.vlan_tag, null)
 
   extra_disks = var.worker.longhorn_disks
 }

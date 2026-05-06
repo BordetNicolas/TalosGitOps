@@ -8,18 +8,29 @@ variable "proxmox" {
     iso_store    = optional(string, "local")
     disk_store   = optional(string, "local-lvm")
     bridge       = optional(string, "vmbr0")
+    # Tag 802.1Q sur la vNIC (bridge vlan-aware côté hôte). Null = trafic non tagué.
+    vlan_tag     = optional(number, null)
     ssh_username = optional(string, "root")
   })
   sensitive = true
 }
 
 variable "cluster" {
-  description = "Cluster-wide identity and version pins."
+  description = <<-EOT
+    Identité du cluster et versions.
+    kubernetes_api_host (optionnel) : surcharger l’hôte API (DNS ou IP fixe). Sinon,
+    l’IP du premier control plane telle que remontée par Proxmox (DHCP / guest agent)
+    est utilisée pour talconfig, certSANs et Cilium.
+    install_disk : disque d’installation Talos (talhelper `nodes[].installDisk`).
+    Avec le layout Proxmox par défaut (virtio-scsi, OS sur scsi0), en général /dev/sda.
+    Utilise /dev/vda si le disque est uniquement virtio-blk.
+  EOT
   type = object({
-    name               = string
-    endpoint_vip       = string
+    name                  = string
+    kubernetes_api_host   = optional(string)
     talos_version      = optional(string, "v1.8.4")
     kubernetes_version = optional(string, "1.31.4")
+    install_disk       = optional(string, "/dev/sda")
     extensions = optional(list(string), [
       "siderolabs/qemu-guest-agent",
       "siderolabs/iscsi-tools",

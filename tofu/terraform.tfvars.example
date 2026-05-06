@@ -6,13 +6,17 @@ proxmox = {
   iso_store  = "local"
   disk_store = "local-lvm"
   bridge     = "vmbr0"
+  # vlan_tag = 14 # optionnel : tag 802.1Q sur la vNIC (bridge vlan-aware sur l’hôte)
 }
 
 cluster = {
-  name               = "talos"
-  endpoint_vip       = "192.168.1.50"
+  name = "talos"
+  # Optionnel : forcer l’hôte API (DNS / IP). Sinon = IP DHCP du 1er control plane (output kubernetes_api_host).
+  # kubernetes_api_host = "api.moncluster.lan"
   talos_version      = "v1.8.4"
   kubernetes_version = "1.31.4"
+  # Disque OS Talos (scsi0 sur les VMs de ce dépôt → en général /dev/sda)
+  # install_disk = "/dev/vda"
 }
 
 control_plane = {

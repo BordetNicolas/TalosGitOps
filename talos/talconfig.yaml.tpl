@@ -1,14 +1,9 @@
-# Talhelper configuration template, rendered by `scripts/bootstrap.sh`.
-# Variables substituted at runtime (envsubst):
-#   $CLUSTER_NAME             - cluster.name
-#   $CLUSTER_ENDPOINT_VIP     - cluster.endpoint_vip
-#   $TALOS_VERSION            - cluster.talos_version
-#   $KUBERNETES_VERSION       - cluster.kubernetes_version
-#   $CONTROL_PLANE_NODES_YAML - generated `nodes:` entries for control-plane
-#   $WORKER_NODES_YAML        - generated `nodes:` entries for workers
+# Fichier généré par scripts/bootstrap.sh (envsubst). Ne pas éditer à la main.
+# Variables : CLUSTER_NAME, CLUSTER_KUBERNETES_API_HOST, TALOS_VERSION,
+# KUBERNETES_VERSION, CONTROL_PLANE_NODES_YAML, WORKER_NODES_YAML.
 ---
 clusterName: ${CLUSTER_NAME}
-endpoint: https://${CLUSTER_ENDPOINT_VIP}:6443
+endpoint: https://${CLUSTER_KUBERNETES_API_HOST}:6443
 allowSchedulingOnControlPlanes: false
 
 talosVersion: ${TALOS_VERSION}
@@ -19,11 +14,14 @@ cniConfig:
 
 # Cluster-wide patches applied to every node.
 patches:
-  - "@./patches/cluster-common.yaml"
+  - "@./patches/cluster-common-base.yaml"
+  - "@./patches/cluster-network.generated.yaml"
 
 controlPlane:
   patches:
     - "@./patches/controlplane.generated.yaml"
+    - "@./patches/controlplane-eth-dhcp.generated.yaml"
+    - "@./patches/controlplane-api-access.yaml"
 
 worker:
   patches:
