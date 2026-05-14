@@ -4,12 +4,12 @@ metadata:
   name: argocd-ingress
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   project: platform
   source:
-    repoURL: https://github.com/me/talos.git
-    targetRevision: main
+    repoURL: __ARGOCD_GIT_REPO__
+    targetRevision: __ARGOCD_GIT_REVISION__
     path: gitops/argocd
     directory:
       recurse: false

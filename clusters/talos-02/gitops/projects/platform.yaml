@@ -8,7 +8,7 @@ metadata:
 spec:
   description: Core platform components managed by GitOps (CNI, LB, ingress, storage, ArgoCD itself).
   sourceRepos:
-    - "__ARGOCD_GIT_REPO__"
+    - "https://github.com/BordetNicolas/TalosGitOps.git"
     - "https://helm.cilium.io"
     - "https://argoproj.github.io/argo-helm"
     - "https://charts.jetstack.io"

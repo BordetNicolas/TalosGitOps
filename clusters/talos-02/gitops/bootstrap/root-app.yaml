@@ -1,21 +1,21 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metallb-config
+  name: root
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: platform
   source:
-    repoURL: __ARGOCD_GIT_REPO__
-    targetRevision: __ARGOCD_GIT_REVISION__
-    path: gitops/metallb
+    repoURL: https://github.com/BordetNicolas/TalosGitOps.git
+    targetRevision: main
+    path: clusters/talos-02/gitops/apps
     directory:
-      recurse: false
+      recurse: true
   destination:
     server: https://kubernetes.default.svc
-    namespace: metallb-system
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true

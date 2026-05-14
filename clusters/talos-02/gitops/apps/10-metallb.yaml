@@ -1,18 +1,24 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metallb-config
+  name: metallb
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: platform
   source:
-    repoURL: __ARGOCD_GIT_REPO__
-    targetRevision: __ARGOCD_GIT_REVISION__
-    path: gitops/metallb
-    directory:
-      recurse: false
+    repoURL: https://metallb.github.io/metallb
+    chart: metallb
+    targetRevision: 0.14.9
+    helm:
+      releaseName: metallb
+      values: |
+        speaker:
+          frr:
+            enabled: false
+        controller:
+          enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: metallb-system

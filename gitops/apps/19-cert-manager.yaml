@@ -1,21 +1,26 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metallb-config
+  name: cert-manager
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: platform
   source:
-    repoURL: __ARGOCD_GIT_REPO__
-    targetRevision: __ARGOCD_GIT_REVISION__
-    path: gitops/metallb
-    directory:
-      recurse: false
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.18.2
+    helm:
+      releaseName: cert-manager
+      values: |
+        crds:
+          enabled: true
+        prometheus:
+          enabled: true
   destination:
     server: https://kubernetes.default.svc
-    namespace: metallb-system
+    namespace: cert-manager
   syncPolicy:
     automated:
       prune: true

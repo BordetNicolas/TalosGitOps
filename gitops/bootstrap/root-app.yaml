@@ -8,9 +8,9 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: ${ARGOCD_GIT_REPO}
-    targetRevision: ${ARGOCD_GIT_REVISION}
-    path: ${ARGOCD_GIT_PATH}/apps
+    repoURL: __ARGOCD_GIT_REPO__
+    targetRevision: __ARGOCD_GIT_REVISION__
+    path: clusters/__CLUSTER__/gitops/apps
     directory:
       recurse: true
   destination:

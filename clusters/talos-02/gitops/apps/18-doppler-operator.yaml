@@ -1,21 +1,21 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metallb-config
+  name: doppler-operator
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
   project: platform
   source:
-    repoURL: __ARGOCD_GIT_REPO__
-    targetRevision: __ARGOCD_GIT_REVISION__
-    path: gitops/metallb
-    directory:
-      recurse: false
+    repoURL: https://helm.doppler.com
+    chart: doppler-kubernetes-operator
+    targetRevision: 1.6.0
+    helm:
+      releaseName: doppler-operator
   destination:
     server: https://kubernetes.default.svc
-    namespace: metallb-system
+    namespace: doppler-operator-system
   syncPolicy:
     automated:
       prune: true

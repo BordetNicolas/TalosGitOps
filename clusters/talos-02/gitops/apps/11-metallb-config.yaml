@@ -8,9 +8,9 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: __ARGOCD_GIT_REPO__
-    targetRevision: __ARGOCD_GIT_REVISION__
-    path: gitops/metallb
+    repoURL: https://github.com/BordetNicolas/TalosGitOps.git
+    targetRevision: main
+    path: clusters/talos-02/gitops/metallb
     directory:
       recurse: false
   destination:
