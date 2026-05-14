@@ -18,6 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 require_cmd tofu
 require_cmd talhelper
 require_cmd talosctl
+require_cmd helm
 require_cmd jq
 require_cmd envsubst
 require_cmd yq
@@ -27,16 +28,15 @@ require_cmd yq
 # ---------------------------------------------------------------------------
 
 read_cluster_info() {
-  # Do not use `tofu output cluster_name`: after a targeted `tofu apply -target=...`,
-  # OpenTofu may not persist outputs that only reference variables (nothing in
-  # the target graph). Read from configuration via `tofu console` instead.
-  CLUSTER_NAME="$(echo 'var.cluster.name' | tofu -chdir="${TOFU_DIR}" console | tr -d '"')"
+  # Use tofu_var() (which passes -var-file and suppresses warnings) for variable
+  # values, and tofu_output() for outputs that depend on live infrastructure.
+  CLUSTER_NAME="$(tofu_var 'var.cluster.name' | tr -d '"')"
   CLUSTER_KUBERNETES_API_HOST="$(
-    tofu -chdir="${TOFU_DIR}" output -json kubernetes_api_host 2>/dev/null | jq -r 'if . == null then "" else . end' || echo ""
+    tofu_output kubernetes_api_host | jq -r 'if . == null then "" else . end' 2>/dev/null || echo ""
   )"
-  TALOS_VERSION="$(echo 'var.cluster.talos_version' | tofu -chdir="${TOFU_DIR}" console | tr -d '"')"
-  KUBERNETES_VERSION="$(echo 'var.cluster.kubernetes_version' | tofu -chdir="${TOFU_DIR}" console | tr -d '"')"
-  INSTALL_DISK="$(echo 'var.cluster.install_disk' | tofu -chdir="${TOFU_DIR}" console | tr -d '"')"
+  TALOS_VERSION="$(tofu_var 'var.cluster.talos_version' | tr -d '"')"
+  KUBERNETES_VERSION="$(tofu_var 'var.cluster.kubernetes_version' | tr -d '"')"
+  INSTALL_DISK="$(tofu_var 'var.cluster.install_disk' | tr -d '"')"
   export CLUSTER_NAME CLUSTER_KUBERNETES_API_HOST TALOS_VERSION KUBERNETES_VERSION INSTALL_DISK
 }
 
@@ -48,11 +48,36 @@ first_control_plane_ipv4() {
 }
 
 read_longhorn_disk_count() {
-  LONGHORN_DISK_COUNT="$(
-    echo 'length(var.worker.longhorn_disks)' |
-      tofu -chdir="${TOFU_DIR}" console | tr -d '"'
-  )"
+  LONGHORN_DISK_COUNT="$(tofu_var 'length(var.worker.longhorn_disks)' | tr -d '"')"
   export LONGHORN_DISK_COUNT
+}
+
+render_cilium_inline_manifest() {
+  local out="${TALOS_DIR}/patches/cilium-inline-manifest.generated.yaml"
+
+  log "rendering Cilium ${CILIUM_CHART_VERSION:-1.16.4} as Talos inline manifest"
+  helm repo add cilium https://helm.cilium.io >/dev/null 2>&1 || true
+  helm repo update cilium >/dev/null 2>&1
+
+  {
+    printf 'cluster:\n'
+    printf '  inlineManifests:\n'
+    printf '    - name: cilium-bootstrap\n'
+    printf '      contents: |\n'
+    # Cilium chart embeds "${BIN_PATH}/..." for the in-container shell; talhelper
+    # runs strict envsubst on merged YAML and would fail without BIN_PATH set.
+    # $${...} survives envsubst as ${...} in the final manifest.
+    helm template cilium cilium/cilium \
+      --namespace kube-system \
+      --version "${CILIUM_CHART_VERSION:-1.16.4}" \
+      --values "${BOOTSTRAP_DIR}/cilium-values.yaml" \
+      --set k8sServiceHost="${CLUSTER_KUBERNETES_API_HOST}" \
+      --set k8sServicePort=6443 \
+      | sed 's/\${BIN_PATH}/$${BIN_PATH}/g' \
+      | sed 's/^/        /'
+  } > "$out"
+
+  log "Cilium inline manifest → ${out}"
 }
 
 render_cluster_network_patch() {
@@ -178,14 +203,31 @@ render_talconfig() {
 # ---------------------------------------------------------------------------
 
 cmd_render() {
-  read_cluster_info
-  [[ -n "${CLUSTER_KUBERNETES_API_HOST}" && "${CLUSTER_KUBERNETES_API_HOST}" != "null" ]] ||
-    die "kubernetes_api_host (output OpenTofu) est vide : lance tofu apply pour créer les VMs et remonter les IP DHCP (guest agent), ou définis cluster.kubernetes_api_host dans terraform.tfvars."
+  # tofu output reads cached state — the guest agent IP may not be populated yet
+  # if VMs were still booting during `tofu apply`.  Refresh state from Proxmox on
+  # each retry so the guest agent has a chance to report.
+  local attempt=1
+  while true; do
+    read_cluster_info
+    [[ -n "${CLUSTER_KUBERNETES_API_HOST}" && "${CLUSTER_KUBERNETES_API_HOST}" != "null" ]] && break
+    if (( attempt >= 40 )); then
+      die "kubernetes_api_host still null after ${attempt} attempts (~10 min).
+  Workarounds:
+    • Set cluster.kubernetes_api_host in clusters/${CLUSTER}/terraform.tfvars and rerun.
+    • Check VMs are reachable in Proxmox and qemu-guest-agent extension is active."
+    fi
+    warn "guest agent IP not yet available (attempt ${attempt}/40) — refreshing tofu state..."
+    tofu -chdir="${TOFU_DIR}" apply -refresh-only -auto-approve \
+      -var-file="${TOFU_VARS}" >/dev/null 2>&1 || true
+    sleep 15
+    attempt=$(( attempt + 1 ))
+  done
 
   read_longhorn_disk_count
   render_cluster_network_patch
   render_controlplane_patches
   render_nodes_yaml
+  render_cilium_inline_manifest
   render_worker_patch
   render_talconfig
 }
@@ -216,9 +258,9 @@ cmd_apply() {
       --file "$cfg"
   done < <(
     {
-      tofu -chdir="${TOFU_DIR}" output -json control_plane_nodes |
+      tofu_output control_plane_nodes |
         jq -r 'to_entries[] | "\(.key)\t\(.value.ipv4)"'
-      tofu -chdir="${TOFU_DIR}" output -json worker_nodes |
+      tofu_output worker_nodes |
         jq -r 'to_entries[] | "\(.key)\t\(.value.ipv4)"'
     }
   )

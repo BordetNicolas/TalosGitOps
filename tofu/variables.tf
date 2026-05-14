@@ -86,36 +86,29 @@ variable "worker" {
   }
 }
 
-variable "metallb_pool" {
-  description = "Inclusive IP range advertised by MetalLB in L2 mode."
-  type = object({
-    start = string
-    end   = string
-  })
-}
-
-variable "argocd" {
-  description = "GitOps source of truth and ArgoCD UI exposure."
-  type = object({
-    git_repo_url  = string
-    git_revision  = optional(string, "main")
-    git_path      = optional(string, "gitops")
-    ingress_host  = optional(string, "argocd.lan")
-    chart_version = optional(string, "7.7.7")
-    image_tag     = optional(string, "v2.13.1")
-  })
-}
-
 variable "minio" {
-  description = "MinIO endpoint and bucket layout for tfstate + kubeconfig."
+  description = "MinIO endpoint and bucket layout. Keys are derived from the cluster name by the Makefile."
   type = object({
     endpoint          = string
     region            = optional(string, "us-east-1")
     state_bucket      = string
-    state_key         = optional(string, "talos-pve1/terraform.tfstate")
     kubeconfig_bucket = string
-    kubeconfig_key    = optional(string, "talos-pve1/kubeconfig")
   })
+}
+
+# Métadonnées parfois conservées dans le même fichier que le cluster (gitops,
+# plages MetalLB, etc.). Non utilisées par ce module OpenTofu — déclarées pour
+# éviter les avertissements « undeclared variable » qui polluent `tofu console`.
+variable "metallb_pool" {
+  type     = any
+  default  = null
+  nullable = true
+}
+
+variable "argocd" {
+  type     = any
+  default  = null
+  nullable = true
 }
 
 variable "vm_id_base" {

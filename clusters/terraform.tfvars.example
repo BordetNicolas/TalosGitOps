@@ -6,17 +6,17 @@ proxmox = {
   iso_store  = "local"
   disk_store = "local-lvm"
   bridge     = "vmbr0"
-  # vlan_tag = 14 # optionnel : tag 802.1Q sur la vNIC (bridge vlan-aware sur l’hôte)
+  # vlan_tag = 14  # optional: 802.1Q VLAN tag on the vNIC (bridge must be vlan-aware)
 }
 
 cluster = {
-  name = "talos"
-  # Optionnel : forcer l’hôte API (DNS / IP). Sinon = IP DHCP du 1er control plane (output kubernetes_api_host).
-  # kubernetes_api_host = "api.moncluster.lan"
+  name = "talos-01"
+  # Optional: force the API host (DNS name or static IP).
+  # If unset, the first control-plane's DHCP IP (via Proxmox guest agent) is used.
+  # kubernetes_api_host = "api.talos-01.lan"
   talos_version      = "v1.8.4"
   kubernetes_version = "1.31.4"
-  # Disque OS Talos (scsi0 sur les VMs de ce dépôt → en général /dev/sda)
-  # install_disk = "/dev/vda"
+  # install_disk = "/dev/vda"  # default: /dev/sda (virtio-scsi, scsi0)
 }
 
 control_plane = {
@@ -41,4 +41,3 @@ minio = {
   state_bucket      = "talos-tfstate"
   kubeconfig_bucket = "kubeconfigs"
 }
-# Note: state/kubeconfig keys are auto-derived from cluster.name (e.g. talos-01/terraform.tfstate).

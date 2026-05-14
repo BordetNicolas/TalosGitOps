@@ -16,6 +16,7 @@ cniConfig:
 patches:
   - "@./patches/cluster-common-base.yaml"
   - "@./patches/cluster-network.generated.yaml"
+  - "@./patches/cilium-inline-manifest.generated.yaml"
 
 controlPlane:
   patches:

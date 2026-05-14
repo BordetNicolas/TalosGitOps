@@ -224,6 +224,124 @@ open https://${ARGOCD_INGRESS_HOST}
 (Make sure `${ARGOCD_INGRESS_HOST}` resolves to the IP MetalLB allocated to
 the `ingress-nginx-controller` Service.)
 
+## ArgoCD HTTPS with cert-manager
+
+This repo now deploys:
+
+- `ingress-nginx` (already present) as the Ingress controller,
+- `cert-manager` via `gitops/apps/19-cert-manager.yaml`,
+- ACME/self-signed issuers via `gitops/apps/22-cert-manager-issuers.yaml`,
+- ArgoCD Ingress TLS in `gitops/argocd/ingress.yaml`.
+- two `external-dns` instances (`Cloudflare` and local `UniFi`).
+
+### Included issuer options
+
+- `letsencrypt-staging` (HTTP-01, safe for tests)
+- `letsencrypt-prod` (HTTP-01, trusted public certs)
+- `letsencrypt-staging-cloudflare` (DNS-01 via Cloudflare)
+- `letsencrypt-prod-cloudflare` (DNS-01 via Cloudflare)
+- `selfsigned-bootstrap` (internal/self-signed certs for private labs)
+
+Edit the email in:
+
+- `gitops/cert-manager/clusterissuer-letsencrypt-staging-http01.yaml`
+- `gitops/cert-manager/clusterissuer-letsencrypt-http01.yaml`
+
+By default, ArgoCD Ingress uses `letsencrypt-prod-cloudflare` via annotation:
+`cert-manager.io/cluster-issuer: letsencrypt-prod-cloudflare`.
+
+### Cloudflare DNS-01 setup (`alexetnico.com`)
+
+1. Create a Cloudflare API token restricted to the `alexetnico.com` zone:
+   - `Zone / DNS / Edit`
+   - `Zone / Zone / Read`
+2. Fill these files before syncing:
+   - `gitops/cert-manager/clusterissuer-letsencrypt-staging-cloudflare.yaml`
+     (`email`)
+   - `gitops/cert-manager/clusterissuer-letsencrypt-prod-cloudflare.yaml`
+     (`email`)
+3. Ensure your DNS has an `A`/`CNAME` for `argocd.alexetnico.com` pointing to
+   your ingress public IP.
+4. Start with staging issuer for validation/tests, then switch to prod if OK.
+
+## ExternalDNS (Cloudflare + UniFi local)
+
+This repo deploys:
+
+- `external-dns-cloudflare` (`gitops/apps/24-external-dns-cloudflare.yaml`)
+- `external-dns-unifi` (`gitops/apps/25-external-dns-unifi.yaml`)
+- shared config/resources (`gitops/apps/23-external-dns-config.yaml`)
+
+### Cloudflare instance
+
+Used for public DNS zone updates (example: `alexetnico.com`).
+
+Fill:
+
+- `gitops/doppler/doppler-secrets.yaml` (`project`, `config`, `identity`)
+
+### UniFi local instance (Dream Machine)
+
+The local UniFi integration uses the `webhook` provider:
+
+- webhook deployment/service: `gitops/external-dns/unifi-webhook.yaml`
+- webhook credentials/config: synced from Doppler to
+  `Secret/external-dns-unifi-webhook-env`
+
+Fill at least:
+
+- `UNIFI_HOST`
+- `UNIFI_API_KEY`
+- `UNIFI_SITE`
+- `UNIFI_SKIP_TLS_VERIFY`
+
+`external-dns-unifi` is scoped to `home.alexetnico.com` by default. Update
+`domainFilters` in `gitops/apps/25-external-dns-unifi.yaml` if needed.
+
+## Secrets with Doppler (no plaintext in Git)
+
+This repo is configured to consume runtime secrets from Doppler using the
+Doppler Kubernetes Operator.
+
+- Operator app: `gitops/apps/18-doppler-operator.yaml`
+- Doppler CRDs app: `gitops/apps/17-doppler-secrets.yaml`
+- Managed DopplerSecret resources: `gitops/doppler/doppler-secrets.yaml`
+
+### What changed
+
+- Plain Kubernetes Secret manifests for Cloudflare and UniFi were removed.
+- `cert-manager` and `external-dns` still read standard Kubernetes secrets,
+  but those secrets are now **materialized automatically by Doppler**.
+
+### Doppler setup steps
+
+1. Create Doppler variables in your project/config:
+   - `CLOUDFLARE_API_TOKEN`
+   - `UNIFI_HOST`
+   - `UNIFI_API_KEY`
+   - `UNIFI_SITE`
+   - `UNIFI_SKIP_TLS_VERIFY`
+2. In `gitops/doppler/doppler-secrets.yaml`, set for each resource:
+   - `project`
+   - `config`
+   - `identity`
+3. Create one Service Account Identity per `DopplerSecret` with audience:
+   - `dopplerSecret:doppler-operator-system:cert-manager-cloudflare-token`
+   - `dopplerSecret:doppler-operator-system:external-dns-cloudflare-token`
+   - `dopplerSecret:doppler-operator-system:external-dns-unifi-webhook-env`
+4. Commit and push; ArgoCD will sync and create managed secrets in target
+   namespaces (`cert-manager` and `external-dns`).
+
+### Important constraints
+
+- **HTTP-01 requires public reachability** of `${ARGOCD_INGRESS_HOST}` on port 80
+  from Let's Encrypt.
+- Domains such as `*.lan` usually **cannot** be validated by public ACME.
+  In that case use:
+  - `selfsigned-bootstrap`, or
+  - a DNS-01 issuer with a real public domain delegated to your DNS provider, or
+  - an internal ACME/PKI (Vault, Smallstep, ADCS) with a cert-manager issuer.
+
 ## Day-2 operations
 
 ### Scaling

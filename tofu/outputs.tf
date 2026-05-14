@@ -46,11 +46,11 @@ output "schematic_id" {
 }
 
 output "kubeconfig_object_url" {
-  description = "MinIO S3 URL where the kubeconfig has been uploaded (empty until the cluster is bootstrapped)."
+  description = "MinIO S3 URL where the kubeconfig has been uploaded (empty until bootstrapped)."
   value = local.kubeconfig_present ? format(
-    "%s/%s/%s",
+    "%s/%s/%s/kubeconfig",
     trimsuffix(var.minio.endpoint, "/"),
     var.minio.kubeconfig_bucket,
-    var.minio.kubeconfig_key,
+    var.cluster.name,
   ) : ""
 }

@@ -1,6 +1,12 @@
-# Secrets / local environment
+# Secrets / local environment (old single-cluster location — kept for safety)
 .env
 *.env.local
+
+# Per-cluster secrets and generated artifacts
+clusters/*/cluster.env
+clusters/*/kubeconfig
+clusters/*/talosconfig
+clusters/*/clusterconfig/
 
 # OpenTofu / Terraform local artifacts (state lives in MinIO)
 tofu/.terraform/
@@ -13,13 +19,14 @@ tofu/terraform.tfvars
 tofu/.cache/
 *.tfplan
 
-# Cluster artifacts (regenerated on each run, also gitignored to avoid leaking secrets)
+# Talos generated artifacts (per-run, cluster-specific)
 kubeconfig
 talosconfig
 clusterconfig/
 talos/talconfig.yaml
 talos/talsecret.yaml
 talos/.talhelper-cache/
+talos/patches/*.generated.yaml
 
 # Talos ISO artifacts (cached locally if generated outside of Proxmox)
 *.iso
@@ -30,3 +37,4 @@ talos/.talhelper-cache/
 .DS_Store
 *.swp
 *~
+clusters/talos-02/terraform.tfvars
