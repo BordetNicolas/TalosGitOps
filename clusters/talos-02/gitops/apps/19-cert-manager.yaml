@@ -18,6 +18,10 @@ spec:
           enabled: true
         prometheus:
           enabled: true
+          servicemonitor:
+            enabled: true
+            labels:
+              release: kube-prometheus-stack
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager

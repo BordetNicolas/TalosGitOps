@@ -25,6 +25,10 @@ spec:
           allowSnippetAnnotations: true
           metrics:
             enabled: true
+            serviceMonitor:
+              enabled: true
+              additionalLabels:
+                release: kube-prometheus-stack
           config:
             use-forwarded-headers: "true"
             ssl-redirect: "true"

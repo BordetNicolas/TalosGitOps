@@ -17,6 +17,8 @@ spec:
     - "https://kubernetes.github.io/ingress-nginx"
     - "https://charts.longhorn.io"
     - "https://kubernetes-sigs.github.io/external-dns/"
+    - "https://prometheus-community.github.io/helm-charts"
+    - "https://grafana.github.io/helm-charts"
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc

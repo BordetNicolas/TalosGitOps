@@ -1,0 +1,28 @@
+# Ingress that exposes the Grafana UI behind ingress-nginx.
+# Certificate is managed by cert-manager (DNS-01, ClusterIssuer letsencrypt-prod).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: __GRAFANA_INGRESS_HOST__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-grafana
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - __GRAFANA_INGRESS_HOST__
+      secretName: grafana-tls
