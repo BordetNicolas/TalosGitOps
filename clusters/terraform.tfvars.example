@@ -10,6 +10,7 @@ proxmox = {
 }
 
 cluster = {
+  # Must match the clusters/<name> directory (make CLUSTER=<name>).
   name = "talos-01"
   # Optional: force the API host (DNS name or static IP).
   # If unset, the first control-plane's DHCP IP (via Proxmox guest agent) is used.

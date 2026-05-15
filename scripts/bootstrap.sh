@@ -54,7 +54,7 @@ ensure_talhelper_secrets() {
   fi
 
   log "generating talhelper secrets (one-time) → ${cluster_secret}"
-  ( cd "${TALOS_DIR}" && talhelper gensecret )
+  ( cd "${TALOS_DIR}" && talhelper gensecret > talsecret.yaml )
   cp "${talos_secret}" "${cluster_secret}"
   log "saved ${cluster_secret} — keep this file for rebuilds; do not regenerate"
 }
@@ -64,6 +64,21 @@ ensure_talhelper_secrets() {
 first_control_plane_ipv4() {
   tofu_output control_plane_nodes |
     jq -r 'to_entries | sort_by(.key) | .[0].value.ipv4'
+}
+
+# IPs attendues selon OpenTofu (source de vérité pour talosctl health).
+# Sans --control-plane-nodes / --worker-nodes, health découvre les cibles via
+# l'API Kubernetes (status.addresses des Node). Avec Cilium ou plusieurs
+# InternalIP par nœud, la liste peut être plus longue que le nombre de machines
+# ou contenir des IPs non joignables sur :50000 — même après un rebuild complet.
+tofu_control_plane_ipv4s() {
+  tofu_output control_plane_nodes |
+    jq -r 'to_entries | sort_by(.key) | .[].value.ipv4'
+}
+
+tofu_worker_ipv4s() {
+  tofu_output worker_nodes |
+    jq -r 'to_entries | sort_by(.key) | .[].value.ipv4'
 }
 
 read_longhorn_disk_count() {
@@ -154,7 +169,9 @@ EOF
     cat <<'EOF'
 machine:
   nodeLabels:
-    node.longhorn.io/create-default-disk: config
+    # "true" → use settings.default-data-path (/var/lib/longhorn).
+    # "config" requires node.longhorn.io/default-disks-config annotation (not set here).
+    node.longhorn.io/create-default-disk: "true"
   disks:
 EOF
     # Disques extra OpenTofu : scsi1, scsi2, … Sous Proxmox + virtio-scsi, le by-id
@@ -397,10 +414,29 @@ cmd_health() {
     die "could not determine first control-plane IP from tofu outputs (needed for talosctl health)"
   local nodes="${TALOS_FETCH_NODES:-$default_transport}"
   local endpoints="${TALOS_FETCH_ENDPOINTS:-$nodes}"
+
+  local -a health_node_flags=()
+  local cp_ip w_ip
+  while IFS= read -r cp_ip; do
+    [[ -z "${cp_ip}" || "${cp_ip}" == "null" ]] && continue
+    health_node_flags+=(--control-plane-nodes "${cp_ip}")
+  done < <(tofu_control_plane_ipv4s)
+  while IFS= read -r w_ip; do
+    [[ -z "${w_ip}" || "${w_ip}" == "null" ]] && continue
+    health_node_flags+=(--worker-nodes "${w_ip}")
+  done < <(tofu_worker_ipv4s)
+  ((${#health_node_flags[@]})) ||
+    die "no control-plane IPs from tofu_output control_plane_nodes — run tofu apply / refresh state"
+
+  local cp_count worker_count
+  cp_count="$(tofu_output control_plane_nodes | jq 'length')"
+  worker_count="$(tofu_output worker_nodes | jq 'length')"
+  log "talosctl health: ${cp_count} control-plane + ${worker_count} worker IP(s) depuis OpenTofu (contourne la découverte K8s / multi-adresses par nœud)"
   log "waiting for cluster health (timeout 15m)..."
   talosctl health \
     --nodes "${nodes}" \
     --endpoints "${endpoints}" \
+    "${health_node_flags[@]}" \
     --wait-timeout 15m
 }
 

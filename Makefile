@@ -113,7 +113,7 @@ check-cluster:
 minio-buckets: check-cluster ## Create state and kubeconfig buckets on MinIO (idempotent).
 	$(ROOT_DIR)/scripts/ensure-minio-buckets.sh
 
-up: check-cluster tofu-init tofu-apply talos-config talos-bootstrap argocd-bootstrap upload-kubeconfig tofu-publish ## Full pipeline: VMs → Talos → ArgoCD → kubeconfig.
+up: check-cluster tofu-init tofu-apply talos-config talos-bootstrap argocd-bootstrap apply-doppler-token upload-kubeconfig tofu-publish ## Full pipeline: VMs → Talos → ArgoCD → kubeconfig.
 	@echo "==> Cluster $(CLUSTER) ready. Run 'make CLUSTER=$(CLUSTER) argo-pwd' for the ArgoCD password."
 
 down: check-cluster ## Destroy all resources for this cluster (MinIO state kept).
