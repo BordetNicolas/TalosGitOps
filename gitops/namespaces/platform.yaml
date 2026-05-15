@@ -1,0 +1,10 @@
+# Created before Doppler-managed secrets and external-dns Helm releases.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-dns

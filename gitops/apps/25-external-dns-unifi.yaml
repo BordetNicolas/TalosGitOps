@@ -38,11 +38,9 @@ spec:
                   secretKeyRef:
                     name: external-dns-unifi-webhook-env
                     key: UNIFI_SITE
+              # Not a secret; keep out of Doppler (boolean keys are often missing from synced Secrets).
               - name: UNIFI_SKIP_TLS_VERIFY
-                valueFrom:
-                  secretKeyRef:
-                    name: external-dns-unifi-webhook-env
-                    key: UNIFI_SKIP_TLS_VERIFY
+                value: "__UNIFI_SKIP_TLS_VERIFY__"
             readinessProbe:
               httpGet:
                 path: /readyz
