@@ -16,8 +16,45 @@ spec:
       values: |
         provider:
           name: webhook
-        extraArgs:
-          - --webhook-provider-url=http://external-dns-unifi-webhook.external-dns.svc.cluster.local:8888
+          webhook:
+            image:
+              repository: ghcr.io/kashalls/external-dns-unifi-webhook
+              tag: v0.8.0
+            env:
+              - name: SERVER_HOST
+                value: "0.0.0.0"
+              - name: UNIFI_HOST
+                valueFrom:
+                  secretKeyRef:
+                    name: external-dns-unifi-webhook-env
+                    key: UNIFI_HOST
+              - name: UNIFI_API_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: external-dns-unifi-webhook-env
+                    key: UNIFI_API_KEY
+              - name: UNIFI_SITE
+                valueFrom:
+                  secretKeyRef:
+                    name: external-dns-unifi-webhook-env
+                    key: UNIFI_SITE
+              - name: UNIFI_SKIP_TLS_VERIFY
+                valueFrom:
+                  secretKeyRef:
+                    name: external-dns-unifi-webhook-env
+                    key: UNIFI_SKIP_TLS_VERIFY
+            readinessProbe:
+              httpGet:
+                path: /readyz
+                port: http-webhook
+              initialDelaySeconds: 10
+              timeoutSeconds: 5
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: http-webhook
+              initialDelaySeconds: 10
+              timeoutSeconds: 5
         domainFilters:
           - alexetnico.com
         txtOwnerId: talos-02
