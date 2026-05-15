@@ -293,9 +293,11 @@ git add clusters/<name>/gitops/ && git commit && git push
 ### Doppler setup (Free plan / service token)
 
 1. In Doppler, create a **Service Token** with read access to your project/config.
-2. Store app secrets in that config: `CLOUDFLARE_API_TOKEN`, `UNIFI_HOST`, `UNIFI_API_KEY`, `UNIFI_SITE`, `UNIFI_SKIP_TLS_VERIFY`.
+2. Store app secrets in that config: `CLOUDFLARE_API_TOKEN`, `UNIFI_HOST`, `UNIFI_API_KEY`, `UNIFI_SITE` (`UNIFI_SKIP_TLS_VERIFY` is set in `cluster.env` for Helm, not Doppler).
 3. Set `DOPPLER_SERVICE_TOKEN`, `DOPPLER_PROJECT`, `DOPPLER_CONFIG` in `cluster.env`.
-4. `apply-doppler-token` then ArgoCD sync (`doppler-operator` → `doppler-secrets`).
+4. `apply-doppler-token` then ArgoCD sync (`platform-namespaces` → `doppler-operator` → `doppler-secrets`).
+
+`external-dns` and `cert-manager` namespaces are created at wave 1 so Doppler can write managed Secrets before Helm apps start.
 
 ## Day-2 operations
 

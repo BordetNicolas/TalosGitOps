@@ -34,6 +34,7 @@ substitute() {
     -e "s|__ACME_EMAIL__|${ACME_EMAIL:-__ACME_EMAIL__}|g" \
     -e "s|__DOPPLER_PROJECT__|${DOPPLER_PROJECT:-__DOPPLER_PROJECT__}|g" \
     -e "s|__DOPPLER_CONFIG__|${DOPPLER_CONFIG:-__DOPPLER_CONFIG__}|g" \
+    -e "s|__UNIFI_SKIP_TLS_VERIFY__|${UNIFI_SKIP_TLS_VERIFY:-true}|g" \
     -e "s|__CLUSTER__|${CLUSTER}|g" \
     -e "s|path: gitops/|path: clusters/${CLUSTER}/gitops/|g" \
     "$src" > "$dst"
@@ -58,6 +59,7 @@ render_dir() {
 
 render_dir apps
 render_dir bootstrap
+render_dir namespaces
 render_dir projects
 render_dir metallb
 render_dir argocd

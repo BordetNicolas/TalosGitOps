@@ -1,7 +1,7 @@
 cluster:
   apiServer:
     certSANs:
-      - 192.168.15.115
+      - 192.168.15.225
       - talos-01
   controllerManager: {}
   scheduler: {}
