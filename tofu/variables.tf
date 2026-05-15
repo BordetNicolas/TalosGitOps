@@ -34,6 +34,7 @@ variable "cluster" {
     extensions = optional(list(string), [
       "siderolabs/qemu-guest-agent",
       "siderolabs/iscsi-tools",
+      "siderolabs/util-linux-tools",
     ])
   })
 }

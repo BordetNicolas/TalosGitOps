@@ -6,6 +6,7 @@
 clusters/*/cluster.env
 clusters/*/kubeconfig
 clusters/*/talosconfig
+clusters/*/talsecret.yaml
 clusters/*/clusterconfig/
 clusters/*/.secrets-rendered/
 clusters/*/gitops/**/secret-*.yaml

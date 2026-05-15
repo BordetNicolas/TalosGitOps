@@ -31,6 +31,9 @@ read_cluster_info() {
   # Use tofu_var() (which passes -var-file and suppresses warnings) for variable
   # values, and tofu_output() for outputs that depend on live infrastructure.
   CLUSTER_NAME="$(tofu_var 'var.cluster.name' | tr -d '"')"
+  if [[ "${CLUSTER_NAME}" != "${CLUSTER}" ]]; then
+    die "cluster.name in terraform.tfvars (${CLUSTER_NAME}) must match CLUSTER=${CLUSTER}"
+  fi
   CLUSTER_KUBERNETES_API_HOST="$(
     tofu_output kubernetes_api_host | jq -r 'if . == null then "" else . end' 2>/dev/null || echo ""
   )"
@@ -38,6 +41,22 @@ read_cluster_info() {
   KUBERNETES_VERSION="$(tofu_var 'var.cluster.kubernetes_version' | tr -d '"')"
   INSTALL_DISK="$(tofu_var 'var.cluster.install_disk' | tr -d '"')"
   export CLUSTER_NAME CLUSTER_KUBERNETES_API_HOST TALOS_VERSION KUBERNETES_VERSION INSTALL_DISK
+}
+
+ensure_talhelper_secrets() {
+  local cluster_secret="${CLUSTER_DIR}/talsecret.yaml"
+  local talos_secret="${TALOS_DIR}/talsecret.yaml"
+
+  if [[ -f "${cluster_secret}" ]]; then
+    cp "${cluster_secret}" "${talos_secret}"
+    log "using talhelper secrets from ${cluster_secret}"
+    return
+  fi
+
+  log "generating talhelper secrets (one-time) → ${cluster_secret}"
+  ( cd "${TALOS_DIR}" && talhelper gensecret )
+  cp "${talos_secret}" "${cluster_secret}"
+  log "saved ${cluster_secret} — keep this file for rebuilds; do not regenerate"
 }
 
 # IP du premier control-plane (tri par hostname) — cible par défaut pour talosctl
@@ -140,12 +159,16 @@ machine:
 EOF
     # Disques extra OpenTofu : scsi1, scsi2, … Sous Proxmox + virtio-scsi, le by-id
     # est en pratique scsi-0QEMU_QEMU_HARDDISK_drive-scsi<N> (pas …_longhorn-0).
+    # Disk 0 → /var/lib/longhorn (Longhorn manager hostPath + Talos docs).
+    # Extra disks → /var/mnt/longhorn-<n>.
     for ((i = 0; i < LONGHORN_DISK_COUNT; i++)); do
       scsi_idx=$((i + 1))
+      local mountpoint="/var/mnt/longhorn-${i}"
+      [[ "${i}" -eq 0 ]] && mountpoint="/var/lib/longhorn"
       cat <<EOF
     - device: /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi${scsi_idx}
       partitions:
-        - mountpoint: /var/mnt/longhorn-${i}
+        - mountpoint: ${mountpoint}
 EOF
     done
 
@@ -154,10 +177,12 @@ EOF
     extraMounts:
 EOF
     for ((i = 0; i < LONGHORN_DISK_COUNT; i++)); do
+      local mountpoint="/var/mnt/longhorn-${i}"
+      [[ "${i}" -eq 0 ]] && mountpoint="/var/lib/longhorn"
       cat <<EOF
-      - destination: /var/mnt/longhorn-${i}
+      - destination: ${mountpoint}
         type: bind
-        source: /var/mnt/longhorn-${i}
+        source: ${mountpoint}
         options:
           - bind
           - rshared
@@ -177,6 +202,20 @@ EOF
   } >"$out"
 
   log "rendered ${out} with ${LONGHORN_DISK_COUNT} disk(s)"
+}
+
+# Installer image with Image Factory extensions (iscsi-tools, etc.) from tofu schematic_id.
+render_install_image_patch() {
+  local out="${TALOS_DIR}/patches/cluster-install-image.generated.yaml"
+  local schematic_id
+  schematic_id="$(tofu_output_raw schematic_id | tr -d '\n' | tr -d '"')"
+  [[ -n "${schematic_id}" ]] || die "tofu output schematic_id is empty — run make CLUSTER=${CLUSTER} tofu-apply first"
+  cat >"${out}" <<EOF
+machine:
+  install:
+    image: factory.talos.dev/metal-installer/${schematic_id}:${TALOS_VERSION}
+EOF
+  log "rendered ${out} (schematic ${schematic_id:0:12}…)"
 }
 
 # CertSANs cluster + eth0 DHCP sur les masters.
@@ -224,6 +263,7 @@ cmd_render() {
   done
 
   read_longhorn_disk_count
+  render_install_image_patch
   render_cluster_network_patch
   render_controlplane_patches
   render_nodes_yaml
@@ -234,6 +274,7 @@ cmd_render() {
 
 cmd_genconfig() {
   cmd_render
+  ensure_talhelper_secrets
 
   log "generating per-node machineconfigs with talhelper"
   rm -rf "${CLUSTERCONFIG_DIR}"

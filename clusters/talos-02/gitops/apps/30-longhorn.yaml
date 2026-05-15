@@ -14,9 +14,13 @@ spec:
     helm:
       releaseName: longhorn
       values: |
+        # Argo CD runs Helm pre-upgrade hooks as PreSync before other resources exist.
+        preUpgradeChecker:
+          jobEnabled: false
         defaultSettings:
           createDefaultDiskLabeledNodes: true
-          defaultDataPath: /var/mnt/longhorn-0
+          # Must match worker disk mount (Talos): first Longhorn disk → /var/lib/longhorn
+          defaultDataPath: /var/lib/longhorn
           defaultDataLocality: best-effort
           storageMinimalAvailablePercentage: 10
           replicaSoftAntiAffinity: false

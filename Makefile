@@ -179,9 +179,12 @@ status: check-cluster ## Show cluster nodes and ArgoCD app status.
 clean: check-cluster ## Remove local generated files for this cluster (does not touch MinIO).
 	rm -f $(CLUSTER_DIR)/kubeconfig $(CLUSTER_DIR)/talosconfig
 	rm -f $(ROOT_DIR)/talos/talconfig.yaml \
+	      $(ROOT_DIR)/talos/talsecret.yaml \
 	      $(ROOT_DIR)/talos/patches/controlplane.generated.yaml \
 	      $(ROOT_DIR)/talos/patches/controlplane-eth-dhcp.generated.yaml \
+	      $(ROOT_DIR)/talos/patches/cluster-install-image.generated.yaml \
 	      $(ROOT_DIR)/talos/patches/cluster-network.generated.yaml \
 	      $(ROOT_DIR)/talos/patches/worker.generated.yaml \
 	      $(ROOT_DIR)/talos/patches/cilium-inline-manifest.generated.yaml
 	rm -rf $(CLUSTER_DIR)/clusterconfig
+	rm -f $(CLUSTER_DIR)/clusterconfig/worker-recovery.patch.yaml 2>/dev/null || true

@@ -15,6 +15,7 @@ cniConfig:
 # Cluster-wide patches applied to every node.
 patches:
   - "@./patches/cluster-common-base.yaml"
+  - "@./patches/cluster-install-image.generated.yaml"
   - "@./patches/cluster-network.generated.yaml"
   - "@./patches/cilium-inline-manifest.generated.yaml"
 
