@@ -226,43 +226,28 @@ the `ingress-nginx-controller` Service.)
 
 ## ArgoCD HTTPS with cert-manager
 
-This repo now deploys:
+This repo deploys:
 
-- `ingress-nginx` (already present) as the Ingress controller,
+- `ingress-nginx` as the Ingress controller,
 - `cert-manager` via `gitops/apps/19-cert-manager.yaml`,
-- ACME/self-signed issuers via `gitops/apps/22-cert-manager-issuers.yaml`,
+- Let's Encrypt DNS-01 (Cloudflare) via `gitops/apps/22-cert-manager-issuers.yaml`,
 - ArgoCD Ingress TLS in `gitops/argocd/ingress.yaml`.
-- two `external-dns` instances (`Cloudflare` and local `UniFi`).
 
-### Included issuer options
+`gitops/cert-manager/` contains exactly two manifests:
 
-- `letsencrypt-staging` (HTTP-01, safe for tests)
-- `letsencrypt-prod` (HTTP-01, trusted public certs)
-- `letsencrypt-staging-cloudflare` (DNS-01 via Cloudflare)
-- `letsencrypt-prod-cloudflare` (DNS-01 via Cloudflare)
-- `selfsigned-bootstrap` (internal/self-signed certs for private labs)
+- `clusterissuer.yaml` — ClusterIssuer `letsencrypt-prod`
+- `secret-cloudflare-api-token.yaml` — Cloudflare API token for DNS-01
 
-Edit the email in:
+Set `ACME_EMAIL` and `CLOUDFLARE_API_TOKEN` in `clusters/<name>/cluster.env`,
+then run `make CLUSTER=<name> gitops-render`.
 
-- `gitops/cert-manager/clusterissuer-letsencrypt-staging-http01.yaml`
-- `gitops/cert-manager/clusterissuer-letsencrypt-http01.yaml`
+ArgoCD Ingress uses `cert-manager.io/cluster-issuer: letsencrypt-prod`.
 
-By default, ArgoCD Ingress uses `letsencrypt-prod-cloudflare` via annotation:
-`cert-manager.io/cluster-issuer: letsencrypt-prod-cloudflare`.
+### Cloudflare DNS-01 setup
 
-### Cloudflare DNS-01 setup (`alexetnico.com`)
-
-1. Create a Cloudflare API token restricted to the `alexetnico.com` zone:
-   - `Zone / DNS / Edit`
-   - `Zone / Zone / Read`
-2. Fill these files before syncing:
-   - `gitops/cert-manager/clusterissuer-letsencrypt-staging-cloudflare.yaml`
-     (`email`)
-   - `gitops/cert-manager/clusterissuer-letsencrypt-prod-cloudflare.yaml`
-     (`email`)
-3. Ensure your DNS has an `A`/`CNAME` for `argocd.alexetnico.com` pointing to
-   your ingress public IP.
-4. Start with staging issuer for validation/tests, then switch to prod if OK.
+1. Create a Cloudflare API token for your zone (`Zone / DNS / Edit`, `Zone / Zone / Read`).
+2. Set `ACME_EMAIL` and `CLOUDFLARE_API_TOKEN` in `cluster.env`, then `gitops-render`.
+3. Ensure DNS has an `A`/`CNAME` for `${ARGOCD_INGRESS_HOST}` pointing to your ingress IP.
 
 ## ExternalDNS (Cloudflare + UniFi local)
 
@@ -276,71 +261,32 @@ This repo deploys:
 
 Used for public DNS zone updates (example: `alexetnico.com`).
 
-Fill:
-
-- `gitops/doppler/doppler-secrets.yaml` (`project`, `config`, `identity`)
+Set `CLOUDFLARE_API_TOKEN` in `cluster.env`, then `make CLUSTER=<name> gitops-render`.
 
 ### UniFi local instance (Dream Machine)
 
 The local UniFi integration uses the `webhook` provider:
 
 - webhook deployment/service: `gitops/external-dns/unifi-webhook.yaml`
-- webhook credentials/config: synced from Doppler to
-  `Secret/external-dns-unifi-webhook-env`
+- credentials: `gitops/external-dns/secret-external-dns-unifi-webhook-env.yaml` (rendered from `cluster.env`)
 
-Fill at least:
-
-- `UNIFI_HOST`
-- `UNIFI_API_KEY`
-- `UNIFI_SITE`
-- `UNIFI_SKIP_TLS_VERIFY`
+Set in `cluster.env`: `UNIFI_HOST`, `UNIFI_API_KEY`, `UNIFI_SITE`, `UNIFI_SKIP_TLS_VERIFY`.
 
 `external-dns-unifi` is scoped to `home.alexetnico.com` by default. Update
 `domainFilters` in `gitops/apps/25-external-dns-unifi.yaml` if needed.
 
-## Secrets with Doppler (no plaintext in Git)
+## Secrets (`cluster.env` + gitops-render)
 
-This repo is configured to consume runtime secrets from Doppler using the
-Doppler Kubernetes Operator.
+Runtime secrets are set in `clusters/<name>/cluster.env` (gitignored) and rendered
+into Kubernetes Secrets by `make CLUSTER=<name> gitops-render`:
 
-- Operator app: `gitops/apps/18-doppler-operator.yaml`
-- Doppler CRDs app: `gitops/apps/17-doppler-secrets.yaml`
-- Managed DopplerSecret resources: `gitops/doppler/doppler-secrets.yaml`
+| Variable | Rendered to |
+|----------|-------------|
+| `ACME_EMAIL`, `CLOUDFLARE_API_TOKEN` | `cert-manager/cloudflare-api-token`, ClusterIssuer |
+| `CLOUDFLARE_API_TOKEN` | `external-dns/external-dns-cloudflare` |
+| `UNIFI_*` | `external-dns/external-dns-unifi-webhook-env` |
 
-### What changed
-
-- Plain Kubernetes Secret manifests for Cloudflare and UniFi were removed.
-- `cert-manager` and `external-dns` still read standard Kubernetes secrets,
-  but those secrets are now **materialized automatically by Doppler**.
-
-### Doppler setup steps
-
-1. Create Doppler variables in your project/config:
-   - `CLOUDFLARE_API_TOKEN`
-   - `UNIFI_HOST`
-   - `UNIFI_API_KEY`
-   - `UNIFI_SITE`
-   - `UNIFI_SKIP_TLS_VERIFY`
-2. In `gitops/doppler/doppler-secrets.yaml`, set for each resource:
-   - `project`
-   - `config`
-   - `identity`
-3. Create one Service Account Identity per `DopplerSecret` with audience:
-   - `dopplerSecret:doppler-operator-system:cert-manager-cloudflare-token`
-   - `dopplerSecret:doppler-operator-system:external-dns-cloudflare-token`
-   - `dopplerSecret:doppler-operator-system:external-dns-unifi-webhook-env`
-4. Commit and push; ArgoCD will sync and create managed secrets in target
-   namespaces (`cert-manager` and `external-dns`).
-
-### Important constraints
-
-- **HTTP-01 requires public reachability** of `${ARGOCD_INGRESS_HOST}` on port 80
-  from Let's Encrypt.
-- Domains such as `*.lan` usually **cannot** be validated by public ACME.
-  In that case use:
-  - `selfsigned-bootstrap`, or
-  - a DNS-01 issuer with a real public domain delegated to your DNS provider, or
-  - an internal ACME/PKI (Vault, Smallstep, ADCS) with a cert-manager issuer.
+Do not commit `cluster.env`. Review rendered gitops before push if the repo is public.
 
 ## Day-2 operations
 

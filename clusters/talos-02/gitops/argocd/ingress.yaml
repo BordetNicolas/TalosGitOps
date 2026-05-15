@@ -1,6 +1,6 @@
 # Ingress that exposes the ArgoCD UI behind ingress-nginx.
 # Certificate is managed automatically by cert-manager (DNS-01 with Cloudflare,
-# ClusterIssuer `letsencrypt-prod-cloudflare`).
+# ClusterIssuer `letsencrypt-prod`).
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -10,7 +10,7 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod-cloudflare"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
   rules:

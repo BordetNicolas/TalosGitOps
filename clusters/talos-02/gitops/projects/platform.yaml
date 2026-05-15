@@ -12,7 +12,6 @@ spec:
     - "https://helm.cilium.io"
     - "https://argoproj.github.io/argo-helm"
     - "https://charts.jetstack.io"
-    - "https://helm.doppler.com"
     - "https://metallb.github.io/metallb"
     - "https://kubernetes.github.io/ingress-nginx"
     - "https://charts.longhorn.io"

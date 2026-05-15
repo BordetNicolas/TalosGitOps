@@ -11,6 +11,12 @@
 #   __METALLB_POOL_RANGE__    → $METALLB_POOL_RANGE
 #   __CLOUDFLARE_DOMAIN__     → $CLOUDFLARE_DOMAIN (if set)
 #   __UNIFI_DOMAIN__          → $UNIFI_DOMAIN (if set)
+#   __ACME_EMAIL__            → $ACME_EMAIL (if set)
+#   __CLOUDFLARE_API_TOKEN__  → $CLOUDFLARE_API_TOKEN (if set)
+#   __UNIFI_HOST__            → $UNIFI_HOST (if set)
+#   __UNIFI_API_KEY__         → $UNIFI_API_KEY (if set)
+#   __UNIFI_SITE__            → $UNIFI_SITE (if set)
+#   __UNIFI_SKIP_TLS_VERIFY__ → $UNIFI_SKIP_TLS_VERIFY (if set)
 #   __CLUSTER__               → $CLUSTER
 #   path: gitops/<x>          → path: clusters/${CLUSTER}/gitops/<x>
 
@@ -38,6 +44,12 @@ substitute() {
     -e "s|__METALLB_POOL_RANGE__|${METALLB_POOL_RANGE}|g" \
     -e "s|__CLOUDFLARE_DOMAIN__|${CLOUDFLARE_DOMAIN:-__CLOUDFLARE_DOMAIN__}|g" \
     -e "s|__UNIFI_DOMAIN__|${UNIFI_DOMAIN:-__UNIFI_DOMAIN__}|g" \
+    -e "s|__ACME_EMAIL__|${ACME_EMAIL:-__ACME_EMAIL__}|g" \
+    -e "s|__CLOUDFLARE_API_TOKEN__|${CLOUDFLARE_API_TOKEN:-__CLOUDFLARE_API_TOKEN__}|g" \
+    -e "s|__UNIFI_HOST__|${UNIFI_HOST:-__UNIFI_HOST__}|g" \
+    -e "s|__UNIFI_API_KEY__|${UNIFI_API_KEY:-__UNIFI_API_KEY__}|g" \
+    -e "s|__UNIFI_SITE__|${UNIFI_SITE:-__UNIFI_SITE__}|g" \
+    -e "s|__UNIFI_SKIP_TLS_VERIFY__|${UNIFI_SKIP_TLS_VERIFY:-__UNIFI_SKIP_TLS_VERIFY__}|g" \
     -e "s|__CLUSTER__|${CLUSTER}|g" \
     -e "s|path: gitops/|path: clusters/${CLUSTER}/gitops/|g" \
     "$src" > "$dst"
@@ -63,7 +75,6 @@ render_dir projects
 render_dir metallb
 render_dir argocd
 render_dir cert-manager
-render_dir doppler
 render_dir external-dns
 
 log "done — clusters/${CLUSTER}/gitops/ is ready."

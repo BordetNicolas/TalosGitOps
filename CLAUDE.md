@@ -91,8 +91,7 @@ clusters/
       apps/              # ArgoCD Application manifests (ArgoCD reads this path)
       metallb/           # MetalLB IP pool (cluster-specific)
       argocd/            # ArgoCD Ingress (cluster-specific host)
-      cert-manager/      # ClusterIssuers
-      doppler/           # Doppler secrets
+      cert-manager/      # ClusterIssuer + Cloudflare API token Secret
       external-dns/      # external-dns config
     kubeconfig           # gitignored
     talosconfig          # gitignored
@@ -102,7 +101,7 @@ gitops/                  # TEMPLATES — source for gitops-render.sh
   apps/                  # ArgoCD Application templates (with __PLACEHOLDER__)
   bootstrap/root-app.yaml
   projects/platform.yaml
-  metallb/, argocd/, cert-manager/, doppler/, external-dns/
+  metallb/, argocd/, cert-manager/, external-dns/
 
 talos/                   # Shared Talos templates (all clusters)
   talconfig.yaml.tpl
@@ -131,8 +130,7 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 | -1 | 05-argocd (self-managed) |
 | 0 | 10-metallb |
 | 1 | 11-metallb-config |
-| 2 | 17-doppler-secrets, 18-doppler-operator |
-| 3 | 19-cert-manager, 20-ingress-nginx |
+| 2 | 19-cert-manager, 20-ingress-nginx |
 | 4 | 21-argocd-ingress, 22-cert-manager-issuers, 23-external-dns-config |
 | 5 | 24-external-dns-cloudflare, 25-external-dns-unifi |
 | (default) | 30-longhorn |
@@ -149,6 +147,12 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 | `__METALLB_POOL_RANGE__` | `METALLB_POOL_RANGE` |
 | `__CLOUDFLARE_DOMAIN__` | `CLOUDFLARE_DOMAIN` |
 | `__UNIFI_DOMAIN__` | `UNIFI_DOMAIN` |
+| `__ACME_EMAIL__` | `ACME_EMAIL` |
+| `__CLOUDFLARE_API_TOKEN__` | `CLOUDFLARE_API_TOKEN` |
+| `__UNIFI_HOST__` | `UNIFI_HOST` |
+| `__UNIFI_API_KEY__` | `UNIFI_API_KEY` |
+| `__UNIFI_SITE__` | `UNIFI_SITE` |
+| `__UNIFI_SKIP_TLS_VERIFY__` | `UNIFI_SKIP_TLS_VERIFY` |
 | `__CLUSTER__` | `CLUSTER` (directory name) |
 | `path: gitops/<x>` | auto-rewritten to `path: clusters/<name>/gitops/<x>` |
 
