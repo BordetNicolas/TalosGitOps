@@ -15,25 +15,30 @@ spec:
     spec:
       containers:
         - name: webhook
-          # UniFi webhook with API key support (UNIFI_API_KEY).
+          # v0.8+: webhook API on :8888, health/ready on :8080 (see upstream README).
           image: ghcr.io/kashalls/external-dns-unifi-webhook:v0.8.0
           imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8888
-              name: http
+          env:
+            - name: SERVER_HOST
+              value: "0.0.0.0"
           envFrom:
             - secretRef:
                 name: external-dns-unifi-webhook-env
+          ports:
+            - containerPort: 8888
+              name: http
+            - containerPort: 8080
+              name: health
           readinessProbe:
             httpGet:
-              path: /healthz
-              port: http
-            initialDelaySeconds: 5
+              path: /readyz
+              port: health
+            initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
-              port: http
+              port: health
             initialDelaySeconds: 10
             periodSeconds: 15
 ---
