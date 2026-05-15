@@ -128,8 +128,8 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 |------|------|
 | -2 | 00-cilium (adoption of existing) |
 | -1 | 05-argocd (self-managed) |
-| 0 | 10-metallb |
-| 1 | 11-metallb-config |
+| 0 | 11-metallb-config (namespace PSS privileged + IP pool) |
+| 1 | 10-metallb |
 | 2 | 19-cert-manager, 20-ingress-nginx |
 | 4 | 21-argocd-ingress, 22-cert-manager-issuers, 23-external-dns-config |
 | 5 | 24-external-dns-cloudflare, 25-external-dns-unifi |

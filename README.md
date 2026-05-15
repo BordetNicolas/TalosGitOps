@@ -267,8 +267,7 @@ Set `CLOUDFLARE_API_TOKEN` in `cluster.env`, then `make CLUSTER=<name> gitops-re
 
 The local UniFi integration uses the `webhook` provider:
 
-- webhook deployment/service: `gitops/external-dns/unifi-webhook.yaml`
-- credentials: `gitops/external-dns/secret-external-dns-unifi-webhook-env.yaml` (rendered from `cluster.env`)
+- webhook sidecar (chart `external-dns-unifi`) + credentials in `secret-external-dns-unifi-webhook-env.yaml` (from `cluster.env`)
 
 Set in `cluster.env`: `UNIFI_HOST`, `UNIFI_API_KEY`, `UNIFI_SITE`, `UNIFI_SKIP_TLS_VERIFY`.
 
