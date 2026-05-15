@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: doppler-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://helm.doppler.com
+    chart: doppler-kubernetes-operator
+    targetRevision: 1.6.0
+    helm:
+      releaseName: doppler-operator
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: doppler-operator-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

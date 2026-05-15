@@ -4,21 +4,8 @@
 # Source:  gitops/          — templates with __PLACEHOLDER__ markers
 # Output:  clusters/${CLUSTER}/gitops/ — rendered, committed, read by ArgoCD
 #
-# Substitutions applied to every file:
-#   __ARGOCD_GIT_REPO__       → $ARGOCD_GIT_REPO
-#   __ARGOCD_GIT_REVISION__   → $ARGOCD_GIT_REVISION
-#   __ARGOCD_INGRESS_HOST__   → $ARGOCD_INGRESS_HOST
-#   __METALLB_POOL_RANGE__    → $METALLB_POOL_RANGE
-#   __CLOUDFLARE_DOMAIN__     → $CLOUDFLARE_DOMAIN (if set)
-#   __UNIFI_DOMAIN__          → $UNIFI_DOMAIN (if set)
-#   __ACME_EMAIL__            → $ACME_EMAIL (if set)
-#   __CLOUDFLARE_API_TOKEN__  → $CLOUDFLARE_API_TOKEN (if set)
-#   __UNIFI_HOST__            → $UNIFI_HOST (if set)
-#   __UNIFI_API_KEY__         → $UNIFI_API_KEY (if set)
-#   __UNIFI_SITE__            → $UNIFI_SITE (if set)
-#   __UNIFI_SKIP_TLS_VERIFY__ → $UNIFI_SKIP_TLS_VERIFY (if set)
-#   __CLUSTER__               → $CLUSTER
-#   path: gitops/<x>          → path: clusters/${CLUSTER}/gitops/<x>
+# Runtime secrets (API tokens) are synced by Doppler — see gitops/doppler/.
+# Only non-secret values (ACME email, Doppler project/config/identity IDs) come from cluster.env.
 
 set -euo pipefail
 
@@ -45,11 +32,8 @@ substitute() {
     -e "s|__CLOUDFLARE_DOMAIN__|${CLOUDFLARE_DOMAIN:-__CLOUDFLARE_DOMAIN__}|g" \
     -e "s|__UNIFI_DOMAIN__|${UNIFI_DOMAIN:-__UNIFI_DOMAIN__}|g" \
     -e "s|__ACME_EMAIL__|${ACME_EMAIL:-__ACME_EMAIL__}|g" \
-    -e "s|__CLOUDFLARE_API_TOKEN__|${CLOUDFLARE_API_TOKEN:-__CLOUDFLARE_API_TOKEN__}|g" \
-    -e "s|__UNIFI_HOST__|${UNIFI_HOST:-__UNIFI_HOST__}|g" \
-    -e "s|__UNIFI_API_KEY__|${UNIFI_API_KEY:-__UNIFI_API_KEY__}|g" \
-    -e "s|__UNIFI_SITE__|${UNIFI_SITE:-__UNIFI_SITE__}|g" \
-    -e "s|__UNIFI_SKIP_TLS_VERIFY__|${UNIFI_SKIP_TLS_VERIFY:-__UNIFI_SKIP_TLS_VERIFY__}|g" \
+    -e "s|__DOPPLER_PROJECT__|${DOPPLER_PROJECT:-__DOPPLER_PROJECT__}|g" \
+    -e "s|__DOPPLER_CONFIG__|${DOPPLER_CONFIG:-__DOPPLER_CONFIG__}|g" \
     -e "s|__CLUSTER__|${CLUSTER}|g" \
     -e "s|path: gitops/|path: clusters/${CLUSTER}/gitops/|g" \
     "$src" > "$dst"
@@ -64,6 +48,9 @@ render_dir() {
   for f in "${src_dir}"/*.yaml "${src_dir}"/*.yml; do
     [[ -f "$f" ]] || continue
     name="$(basename "$f")"
+    if [[ "$name" == "doppler-service-token-secret.yaml" ]]; then
+      continue
+    fi
     substitute "$f" "${dst_dir}/${name}"
     log "rendered clusters/${CLUSTER}/gitops/${rel}/${name}"
   done
@@ -75,9 +62,9 @@ render_dir projects
 render_dir metallb
 render_dir argocd
 render_dir cert-manager
-render_dir external-dns
+render_dir doppler
 
 log "done — clusters/${CLUSTER}/gitops/ is ready."
-log "Review changes and commit:"
+log "Doppler: set DOPPLER_PROJECT/CONFIG in cluster.env, then: make CLUSTER=${CLUSTER} apply-doppler-token"
 log "  git diff -- clusters/${CLUSTER}/gitops/"
 log "  git add clusters/${CLUSTER}/gitops/ && git commit && git push"

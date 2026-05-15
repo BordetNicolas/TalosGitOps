@@ -236,10 +236,8 @@ This repo deploys:
 `gitops/cert-manager/` contains exactly two manifests:
 
 - `clusterissuer.yaml` — ClusterIssuer `letsencrypt-prod`
-- `secret-cloudflare-api-token.yaml` — Cloudflare API token for DNS-01
 
-Set `ACME_EMAIL` and `CLOUDFLARE_API_TOKEN` in `clusters/<name>/cluster.env`,
-then run `make CLUSTER=<name> gitops-render`.
+Set `ACME_EMAIL` in `cluster.env` and `gitops-render`. Cloudflare API token comes from **Doppler**.
 
 ArgoCD Ingress uses `cert-manager.io/cluster-issuer: letsencrypt-prod`.
 
@@ -261,31 +259,43 @@ This repo deploys:
 
 Used for public DNS zone updates (example: `alexetnico.com`).
 
-Set `CLOUDFLARE_API_TOKEN` in `cluster.env`, then `make CLUSTER=<name> gitops-render`.
+Credentials are synced from **Doppler** into `external-dns` (see below).
 
 ### UniFi local instance (Dream Machine)
 
-The local UniFi integration uses the `webhook` provider:
-
-- webhook sidecar (chart `external-dns-unifi`) + credentials in `secret-external-dns-unifi-webhook-env.yaml` (from `cluster.env`)
-
-Set in `cluster.env`: `UNIFI_HOST`, `UNIFI_API_KEY`, `UNIFI_SITE`, `UNIFI_SKIP_TLS_VERIFY`.
+Webhook sidecar in chart `external-dns-unifi`; credentials from Doppler (`UNIFI_*` variables).
 
 `external-dns-unifi` is scoped to `home.alexetnico.com` by default. Update
 `domainFilters` in `gitops/apps/25-external-dns-unifi.yaml` if needed.
 
-## Secrets (`cluster.env` + gitops-render)
+## Secrets with Doppler
 
-Runtime secrets are set in `clusters/<name>/cluster.env` (gitignored) and rendered
-into Kubernetes Secrets by `make CLUSTER=<name> gitops-render`:
+API tokens (`CLOUDFLARE_API_TOKEN`, `UNIFI_HOST`, `UNIFI_API_KEY`, etc.) are stored in
+**Doppler**, not in Git or `cluster.env`.
 
-| Variable | Rendered to |
-|----------|-------------|
-| `ACME_EMAIL`, `CLOUDFLARE_API_TOKEN` | `cert-manager/cloudflare-api-token`, ClusterIssuer |
-| `CLOUDFLARE_API_TOKEN` | `external-dns/external-dns-cloudflare` |
-| `UNIFI_*` | `external-dns/external-dns-unifi-webhook-env` |
+| Component | ArgoCD app | Sync wave |
+|-----------|------------|-----------|
+| Doppler operator | `18-doppler-operator` | 1 |
+| `DopplerSecret` CRs | `17-doppler-secrets` | 2 |
+| cert-manager / external-dns | later waves | consume synced Secrets |
 
-Do not commit `cluster.env`. Review rendered gitops before push if the repo is public.
+In `cluster.env` (gitignored):
+
+- `DOPPLER_SERVICE_TOKEN` — Doppler **Service Token** (Free plan; never commit)
+- `DOPPLER_PROJECT`, `DOPPLER_CONFIG` — rendered into `DopplerSecret` CRs (safe to commit)
+
+```bash
+make CLUSTER=<name> gitops-render
+make CLUSTER=<name> apply-doppler-token   # once: installs Secret/doppler-service-token
+git add clusters/<name>/gitops/ && git commit && git push
+```
+
+### Doppler setup (Free plan / service token)
+
+1. In Doppler, create a **Service Token** with read access to your project/config.
+2. Store app secrets in that config: `CLOUDFLARE_API_TOKEN`, `UNIFI_HOST`, `UNIFI_API_KEY`, `UNIFI_SITE`, `UNIFI_SKIP_TLS_VERIFY`.
+3. Set `DOPPLER_SERVICE_TOKEN`, `DOPPLER_PROJECT`, `DOPPLER_CONFIG` in `cluster.env`.
+4. `apply-doppler-token` then ArgoCD sync (`doppler-operator` → `doppler-secrets`).
 
 ## Day-2 operations
 

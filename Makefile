@@ -62,7 +62,7 @@ endif
 .PHONY: help up down init-cluster \
         minio-buckets tofu-init tofu-plan tofu-apply tofu-publish \
         talos-config talos-bootstrap fetch-kubeconfig argocd-bootstrap \
-        upload-kubeconfig gitops-render argo-pwd \
+        upload-kubeconfig gitops-render apply-doppler-token argo-pwd \
         status clean check-cluster
 
 .DEFAULT_GOAL := help
@@ -160,6 +160,10 @@ upload-kubeconfig: check-cluster ## Push kubeconfig to MinIO.
 
 gitops-render: check-cluster ## Render gitops/ templates into clusters/$(CLUSTER)/gitops/.
 	$(ROOT_DIR)/scripts/gitops-render.sh
+
+apply-doppler-token: check-cluster ## Apply Doppler service token Secret (never committed).
+	@chmod +x $(ROOT_DIR)/scripts/apply-doppler-token.sh
+	$(ROOT_DIR)/scripts/apply-doppler-token.sh
 
 # ---------- Operations -------------------------------------------------------
 

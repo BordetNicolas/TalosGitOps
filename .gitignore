@@ -7,6 +7,9 @@ clusters/*/cluster.env
 clusters/*/kubeconfig
 clusters/*/talosconfig
 clusters/*/clusterconfig/
+clusters/*/.secrets-rendered/
+clusters/*/gitops/**/secret-*.yaml
+clusters/*/gitops/doppler/doppler-service-token-secret.yaml
 
 # OpenTofu / Terraform local artifacts (state lives in MinIO)
 tofu/.terraform/

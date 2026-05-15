@@ -91,8 +91,8 @@ clusters/
       apps/              # ArgoCD Application manifests (ArgoCD reads this path)
       metallb/           # MetalLB IP pool (cluster-specific)
       argocd/            # ArgoCD Ingress (cluster-specific host)
-      cert-manager/      # ClusterIssuer + Cloudflare API token Secret
-      external-dns/      # external-dns config
+      cert-manager/      # ClusterIssuer (email from cluster.env)
+      doppler/           # DopplerSecret CRs (tokens from Doppler)
     kubeconfig           # gitignored
     talosconfig          # gitignored
     clusterconfig/       # gitignored (generated machineconfigs)
@@ -101,7 +101,7 @@ gitops/                  # TEMPLATES — source for gitops-render.sh
   apps/                  # ArgoCD Application templates (with __PLACEHOLDER__)
   bootstrap/root-app.yaml
   projects/platform.yaml
-  metallb/, argocd/, cert-manager/, external-dns/
+  metallb/, argocd/, cert-manager/, doppler/
 
 talos/                   # Shared Talos templates (all clusters)
   talconfig.yaml.tpl
@@ -129,9 +129,9 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 | -2 | 00-cilium (adoption of existing) |
 | -1 | 05-argocd (self-managed) |
 | 0 | 11-metallb-config (namespace PSS privileged + IP pool) |
-| 1 | 10-metallb |
-| 2 | 19-cert-manager, 20-ingress-nginx |
-| 4 | 21-argocd-ingress, 22-cert-manager-issuers, 23-external-dns-config |
+| 1 | 10-metallb, 18-doppler-operator |
+| 2 | 17-doppler-secrets, 19-cert-manager, 20-ingress-nginx |
+| 4 | 21-argocd-ingress, 22-cert-manager-issuers |
 | 5 | 24-external-dns-cloudflare, 25-external-dns-unifi |
 | (default) | 30-longhorn |
 
@@ -148,11 +148,9 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 | `__CLOUDFLARE_DOMAIN__` | `CLOUDFLARE_DOMAIN` |
 | `__UNIFI_DOMAIN__` | `UNIFI_DOMAIN` |
 | `__ACME_EMAIL__` | `ACME_EMAIL` |
-| `__CLOUDFLARE_API_TOKEN__` | `CLOUDFLARE_API_TOKEN` |
-| `__UNIFI_HOST__` | `UNIFI_HOST` |
-| `__UNIFI_API_KEY__` | `UNIFI_API_KEY` |
-| `__UNIFI_SITE__` | `UNIFI_SITE` |
-| `__UNIFI_SKIP_TLS_VERIFY__` | `UNIFI_SKIP_TLS_VERIFY` |
+| `__DOPPLER_PROJECT__` | `DOPPLER_PROJECT` |
+| `__DOPPLER_CONFIG__` | `DOPPLER_CONFIG` |
+| `DOPPLER_SERVICE_TOKEN` | via `make apply-doppler-token` only (not in gitops-render) |
 | `__CLUSTER__` | `CLUSTER` (directory name) |
 | `path: gitops/<x>` | auto-rewritten to `path: clusters/<name>/gitops/<x>` |
 
