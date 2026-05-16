@@ -9,6 +9,7 @@ spec:
   description: Applications métier déployées depuis le repo apps (workloads-root).
   sourceRepos:
     - "__APPS_GIT_REPO__"
+    - "https://airflow.apache.org"
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc

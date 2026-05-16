@@ -9,6 +9,7 @@ spec:
   description: Applications métier déployées depuis le repo apps (workloads-root).
   sourceRepos:
     - "https://github.com/BordetNicolas/homelab-apps.git"
+    - "https://airflow.apache.org"
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc
