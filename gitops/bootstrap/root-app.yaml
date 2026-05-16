@@ -23,3 +23,21 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    # Argo CD 3 injecte tracking-id sur les Applications enfants (non présent dans Git).
+    - group: argoproj.io
+      kind: Application
+      jqPathExpressions:
+        - .metadata.annotations["argocd.argoproj.io/tracking-id"]
+    # directory.recurse=false est implicite ; le live omet souvent le bloc directory.
+    - group: argoproj.io
+      kind: Application
+      jsonPointers:
+        - /spec/source/directory
+    # Permet des correctifs sur les apps enfants avant push Git (ignoreDifferences, syncOptions).
+    - group: argoproj.io
+      kind: Application
+      jqPathExpressions:
+        - .spec.ignoreDifferences
+        - .spec.syncPolicy.syncOptions
