@@ -12,6 +12,10 @@ spec:
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    # CreateNamespace=true et manifests Namespace explicites
+    - group: ""
+      kind: Namespace
   namespaceResourceWhitelist:
     - group: "*"
       kind: "*"
