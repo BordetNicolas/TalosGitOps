@@ -16,6 +16,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ensure_env \
   ARGOCD_GIT_REPO \
   ARGOCD_GIT_REVISION \
+  APPS_GIT_REPO \
+  APPS_GIT_REVISION \
   METALLB_POOL_RANGE
 
 export_platform_ingress_hosts
@@ -36,6 +38,8 @@ substitute() {
   sed \
     -e "s|__ARGOCD_GIT_REPO__|${ARGOCD_GIT_REPO}|g" \
     -e "s|__ARGOCD_GIT_REVISION__|${ARGOCD_GIT_REVISION}|g" \
+    -e "s|__APPS_GIT_REPO__|${APPS_GIT_REPO}|g" \
+    -e "s|__APPS_GIT_REVISION__|${APPS_GIT_REVISION}|g" \
     -e "s|__ARGOCD_INGRESS_HOST__|${ARGOCD_INGRESS_HOST}|g" \
     -e "s|__LONGHORN_INGRESS_HOST__|${LONGHORN_INGRESS_HOST}|g" \
     -e "s|__GRAFANA_INGRESS_HOST__|${GRAFANA_INGRESS_HOST}|g" \

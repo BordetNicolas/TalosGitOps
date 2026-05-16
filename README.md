@@ -195,6 +195,10 @@ git push
 Re-run `make gitops-render` after changing any of the four variables in
 `.env`.
 
+### Applications métier (repo séparé)
+
+La stack plateforme (Cilium, MetalLB, ingress, Longhorn, observabilité) reste dans le repo GitOps plateforme (`ARGOCD_GIT_REPO`). Les applications métier peuvent vivre dans un second repo public (`APPS_GIT_REPO`), synchronisé par ArgoCD via `workloads-root` (sync-wave 10). Définir `APPS_GIT_REPO` et `APPS_GIT_REVISION` dans `cluster.env`, puis `make gitops-render`. Structure de départ : [`examples/homelab-apps/`](examples/homelab-apps/).
+
 ## Bootstrap workflow
 
 ```bash

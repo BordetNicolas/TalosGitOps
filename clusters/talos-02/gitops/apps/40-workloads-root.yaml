@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: workloads-root
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  project: workloads
+  source:
+    repoURL: https://github.com/BordetNicolas/homelab-apps.git
+    targetRevision: main
+    path: clusters/talos-02/apps
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: argoproj.io
+      kind: Application
+      jqPathExpressions:
+        - .metadata.annotations["argocd.argoproj.io/tracking-id"]
+    - group: argoproj.io
+      kind: Application
+      jsonPointers:
+        - /spec/source/directory
+    - group: argoproj.io
+      kind: Application
+      jqPathExpressions:
+        - .spec.ignoreDifferences
+        - .spec.syncPolicy.syncOptions

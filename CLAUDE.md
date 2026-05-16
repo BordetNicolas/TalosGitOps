@@ -135,6 +135,12 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 | 5 | 36-longhorn-ingress |
 | 5 | 24-external-dns-cloudflare, 25-external-dns-unifi |
 | (default) | 30-longhorn |
+| 9 | 39-workloads-project (AppProject workloads) |
+| 10 | 40-workloads-root (pont vers repo apps) |
+
+### Workloads repo (applications métier)
+
+La plateforme (CNI, ingress, stockage, observabilité) reste dans ce repo (`ARGOCD_GIT_REPO`). Les applications métier vivent dans un **repo séparé** (`APPS_GIT_REPO`), synchronisé via `workloads-root` → `clusters/<CLUSTER>/apps/` dans le repo apps. Projet ArgoCD `workloads` ; enfants utilisent `project: workloads`. Modèle : app-of-apps imbriqué (pas ApplicationSet). Exemple de structure : `examples/homelab-apps/`.
 
 ### Template Placeholder System
 
@@ -144,6 +150,8 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 |---|---|
 | `__ARGOCD_GIT_REPO__` | `ARGOCD_GIT_REPO` in cluster.env |
 | `__ARGOCD_GIT_REVISION__` | `ARGOCD_GIT_REVISION` |
+| `__APPS_GIT_REPO__` | `APPS_GIT_REPO` in cluster.env |
+| `__APPS_GIT_REVISION__` | `APPS_GIT_REVISION` |
 | `__ARGOCD_INGRESS_HOST__` | `PLATFORM_ENV` → `argocd-<env>.<domain>` ou `argocd.<domain>` si `prd`/`prod` |
 | `__LONGHORN_INGRESS_HOST__` | même règle avec `PLATFORM_ENV` |
 | `__GRAFANA_INGRESS_HOST__` | même règle avec `PLATFORM_ENV` |
