@@ -15,8 +15,8 @@ cluster = {
   # Optional: force the API host (DNS name or static IP).
   # If unset, the first control-plane's DHCP IP (via Proxmox guest agent) is used.
   # kubernetes_api_host = "api.talos-01.lan"
-  talos_version      = "v1.8.4"
-  kubernetes_version = "1.31.4"
+  talos_version      = "v1.13.2"
+  kubernetes_version = "1.36.1"
   # install_disk = "/dev/vda"  # default: /dev/sda (virtio-scsi, scsi0)
 }
 

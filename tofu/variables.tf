@@ -28,8 +28,8 @@ variable "cluster" {
   type = object({
     name                  = string
     kubernetes_api_host   = optional(string)
-    talos_version      = optional(string, "v1.8.4")
-    kubernetes_version = optional(string, "1.31.4")
+    talos_version      = optional(string, "v1.13.2")
+    kubernetes_version = optional(string, "1.36.1")
     install_disk       = optional(string, "/dev/sda")
     extensions = optional(list(string), [
       "siderolabs/qemu-guest-agent",

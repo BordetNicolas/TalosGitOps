@@ -13,8 +13,8 @@ cluster = {
   name = "talos"
   # Optionnel : forcer l’hôte API (DNS / IP). Sinon = IP DHCP du 1er control plane (output kubernetes_api_host).
   # kubernetes_api_host = "api.moncluster.lan"
-  talos_version      = "v1.8.4"
-  kubernetes_version = "1.31.4"
+  talos_version      = "v1.13.2"
+  kubernetes_version = "1.36.1"
   # Disque OS Talos (scsi0 sur les VMs de ce dépôt → en général /dev/sda)
   # install_disk = "/dev/vda"
 }
