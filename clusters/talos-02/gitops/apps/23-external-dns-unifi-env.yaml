@@ -1,0 +1,26 @@
+# Secret UNIFI_HOST (depuis cluster.env via gitops-render) — requis avant external-dns-unifi (wave 5).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns-unifi-env
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/BordetNicolas/TalosGitOps.git
+    targetRevision: main
+    path: clusters/talos-02/gitops/external-dns
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-dns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

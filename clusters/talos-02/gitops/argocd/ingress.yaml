@@ -15,7 +15,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: argocd.alexetnico.com
+    - host: argocd-test.alexetnico.com
       http:
         paths:
           - path: /
@@ -27,5 +27,5 @@ spec:
                   number: 80
   tls:
     - hosts:
-        - argocd.alexetnico.com
+        - argocd-test.alexetnico.com
       secretName: argocd-server-tls
