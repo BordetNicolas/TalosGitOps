@@ -1,30 +1,28 @@
-# Ingress that exposes the ArgoCD UI behind ingress-nginx.
-# Certificate is managed automatically by cert-manager (DNS-01 with Cloudflare,
-# ClusterIssuer `letsencrypt-prod`).
+# Ingress that exposes the Longhorn UI behind ingress-nginx.
+# Certificate is managed by cert-manager (DNS-01, ClusterIssuer letsencrypt-prod).
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: argocd-server
-  namespace: argocd
+  name: longhorn-frontend
+  namespace: longhorn-system
   annotations:
-    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
   rules:
-    - host: argocd-02.alexetnico.com
+    - host: __LONGHORN_INGRESS_HOST__
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: argocd-server
+                name: longhorn-frontend
                 port:
                   number: 80
   tls:
     - hosts:
-        - argocd-02.alexetnico.com
-      secretName: argocd-server-tls
+        - __LONGHORN_INGRESS_HOST__
+      secretName: longhorn-frontend-tls

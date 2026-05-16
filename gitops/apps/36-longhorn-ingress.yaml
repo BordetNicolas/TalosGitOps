@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: longhorn-ingress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: platform
+  source:
+    repoURL: __ARGOCD_GIT_REPO__
+    targetRevision: __ARGOCD_GIT_REVISION__
+    path: gitops/longhorn
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

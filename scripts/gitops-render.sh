@@ -16,9 +16,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ensure_env \
   ARGOCD_GIT_REPO \
   ARGOCD_GIT_REVISION \
-  ARGOCD_INGRESS_HOST \
-  GRAFANA_INGRESS_HOST \
-  METALLB_POOL_RANGE
+  METALLB_POOL_RANGE \
+  CLOUDFLARE_DOMAIN
+
+export_platform_ingress_hosts
+ensure_env ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST
+
+log "ingress hosts (env=$(platform_env)): argocd=${ARGOCD_INGRESS_HOST} longhorn=${LONGHORN_INGRESS_HOST} grafana=${GRAFANA_INGRESS_HOST}"
 
 SRC="${GITOPS_TEMPLATES_DIR}"
 DST="${GITOPS_DIR}"
@@ -29,6 +33,7 @@ substitute() {
     -e "s|__ARGOCD_GIT_REPO__|${ARGOCD_GIT_REPO}|g" \
     -e "s|__ARGOCD_GIT_REVISION__|${ARGOCD_GIT_REVISION}|g" \
     -e "s|__ARGOCD_INGRESS_HOST__|${ARGOCD_INGRESS_HOST}|g" \
+    -e "s|__LONGHORN_INGRESS_HOST__|${LONGHORN_INGRESS_HOST}|g" \
     -e "s|__GRAFANA_INGRESS_HOST__|${GRAFANA_INGRESS_HOST}|g" \
     -e "s|__METALLB_POOL_RANGE__|${METALLB_POOL_RANGE}|g" \
     -e "s|__CLOUDFLARE_DOMAIN__|${CLOUDFLARE_DOMAIN:-__CLOUDFLARE_DOMAIN__}|g" \
@@ -65,6 +70,7 @@ render_dir namespaces
 render_dir projects
 render_dir metallb
 render_dir argocd
+render_dir longhorn
 render_dir cert-manager
 render_dir doppler
 render_dir observability

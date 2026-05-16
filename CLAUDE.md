@@ -132,6 +132,7 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 | 1 | 16-platform-namespaces, 10-metallb, 18-doppler-operator |
 | 2 | 17-doppler-secrets, 19-cert-manager, 20-ingress-nginx |
 | 4 | 21-argocd-ingress, 22-cert-manager-issuers |
+| 5 | 36-longhorn-ingress |
 | 5 | 24-external-dns-cloudflare, 25-external-dns-unifi |
 | (default) | 30-longhorn |
 
@@ -143,7 +144,9 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 |---|---|
 | `__ARGOCD_GIT_REPO__` | `ARGOCD_GIT_REPO` in cluster.env |
 | `__ARGOCD_GIT_REVISION__` | `ARGOCD_GIT_REVISION` |
-| `__ARGOCD_INGRESS_HOST__` | `ARGOCD_INGRESS_HOST` |
+| `__ARGOCD_INGRESS_HOST__` | `ARGOCD_INGRESS_HOST` (auto: `argocd-<env>.<domain>` ou `argocd.<domain>` si prd/prod) |
+| `__LONGHORN_INGRESS_HOST__` | `LONGHORN_INGRESS_HOST` (même règle) |
+| `__GRAFANA_INGRESS_HOST__` | `GRAFANA_INGRESS_HOST` (même règle) |
 | `__METALLB_POOL_RANGE__` | `METALLB_POOL_RANGE` |
 | `__CLOUDFLARE_DOMAIN__` | `CLOUDFLARE_DOMAIN` |
 | `__UNIFI_DOMAIN__` | `UNIFI_DOMAIN` |
