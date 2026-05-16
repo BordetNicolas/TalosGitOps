@@ -31,12 +31,12 @@ spec:
               - name: UNIFI_API_KEY
                 valueFrom:
                   secretKeyRef:
-                    name: external-dns-unifi-webhook-env
+                    name: external-dns-unifi-credentials
                     key: UNIFI_API_KEY
               - name: UNIFI_SITE
                 valueFrom:
                   secretKeyRef:
-                    name: external-dns-unifi-webhook-env
+                    name: external-dns-unifi-credentials
                     key: UNIFI_SITE
               # Not a secret; keep out of Doppler (boolean keys are often missing from synced Secrets).
               - name: UNIFI_SKIP_TLS_VERIFY
@@ -53,14 +53,15 @@ spec:
                 port: http-webhook
               initialDelaySeconds: 10
               timeoutSeconds: 5
+        extraArgs:
+          - --annotation-filter=external-dns.alpha.kubernetes.io/set=unifi
         domainFilters:
           - alexetnico.com
-        txtOwnerId: talos-02
+        txtOwnerId: talos-02-unifi
         txtPrefix: "k8s."
         policy: sync
         sources:
           - ingress
-          - service
         triggerLoopOnEvent: true
         interval: 1m
         logLevel: info

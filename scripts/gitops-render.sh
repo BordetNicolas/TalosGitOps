@@ -21,7 +21,12 @@ ensure_env \
 export_platform_ingress_hosts
 ensure_env ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST
 
+if [[ -n "${UNIFI_HOST:-}" ]]; then
+  export UNIFI_HOST="$(normalize_unifi_host)"
+fi
+
 log "ingress hosts (env=$(platform_env)): argocd=${ARGOCD_INGRESS_HOST} longhorn=${LONGHORN_INGRESS_HOST} grafana=${GRAFANA_INGRESS_HOST}"
+[[ -n "${UNIFI_HOST:-}" ]] && log "unifi API: ${UNIFI_HOST}"
 
 SRC="${GITOPS_TEMPLATES_DIR}"
 DST="${GITOPS_DIR}"
@@ -41,6 +46,7 @@ substitute() {
     -e "s|__DOPPLER_PROJECT__|${DOPPLER_PROJECT:-__DOPPLER_PROJECT__}|g" \
     -e "s|__DOPPLER_CONFIG__|${DOPPLER_CONFIG:-__DOPPLER_CONFIG__}|g" \
     -e "s|__UNIFI_SKIP_TLS_VERIFY__|${UNIFI_SKIP_TLS_VERIFY:-true}|g" \
+    -e "s|__UNIFI_HOST__|${UNIFI_HOST:-https://unifi.local}|g" \
     -e "s|__CLUSTER__|${CLUSTER}|g" \
     -e "s|path: gitops/|path: clusters/${CLUSTER}/gitops/|g" \
     "$src" > "$dst"
@@ -71,6 +77,7 @@ render_dir metallb
 render_dir argocd
 render_dir longhorn
 render_dir cert-manager
+render_dir external-dns
 render_dir doppler
 render_dir observability
 

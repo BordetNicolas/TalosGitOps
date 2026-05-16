@@ -114,6 +114,16 @@ platform_ingress_host() {
   esac
 }
 
+# UNIFI_HOST doit être une URL complète (https://ip-ou-hostname).
+normalize_unifi_host() {
+  local h="${UNIFI_HOST:-}"
+  [[ -n "$h" ]] || return 0
+  if [[ "$h" != http://* && "$h" != https://* ]]; then
+    h="https://${h}"
+  fi
+  printf '%s' "$h"
+}
+
 # Renseigne ARGOCD_INGRESS_HOST / LONGHORN_INGRESS_HOST / GRAFANA_INGRESS_HOST si absents.
 export_platform_ingress_hosts() {
   ensure_env PLATFORM_ENV CLOUDFLARE_DOMAIN

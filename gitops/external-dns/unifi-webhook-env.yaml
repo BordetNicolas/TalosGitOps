@@ -1,0 +1,9 @@
+# UNIFI_HOST depuis cluster.env (doit inclure https://). Clés API restent dans Doppler.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: external-dns-unifi-webhook-env
+  namespace: external-dns
+type: Opaque
+stringData:
+  UNIFI_HOST: "__UNIFI_HOST__"

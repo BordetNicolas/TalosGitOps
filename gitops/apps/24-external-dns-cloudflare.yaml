@@ -22,14 +22,15 @@ spec:
               secretKeyRef:
                 name: external-dns-cloudflare
                 key: api-token
+        extraArgs:
+          - --annotation-filter=external-dns.alpha.kubernetes.io/set=cloudflare
         domainFilters:
           - __CLOUDFLARE_DOMAIN__
-        txtOwnerId: __CLUSTER__
+        txtOwnerId: __CLUSTER__-cf
         txtPrefix: "k8s."
         policy: sync
         sources:
           - ingress
-          - service
         triggerLoopOnEvent: true
         interval: 1m
         logLevel: info
