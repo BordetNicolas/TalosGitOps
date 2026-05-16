@@ -42,6 +42,12 @@ spec:
             enabled: true
             storageClass: longhorn
             size: 30Gi
+        # Memcached caches (defaults: chunks 8Gi) — disable on homelab SingleBinary;
+        # workers ~8Gi RAM cannot schedule loki-chunks-cache-0.
+        chunksCache:
+          enabled: false
+        resultsCache:
+          enabled: false
         gateway:
           enabled: false
         read:
