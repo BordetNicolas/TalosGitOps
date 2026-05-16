@@ -9,10 +9,15 @@ kind: Namespace
 metadata:
   name: external-dns
 ---
+# node-exporter (hostNetwork, hostPath) + composants observabilité sur Talos PSS.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: monitoring
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
 ---
 # Longhorn manager requires hostPath, privileged containers, and host mounts.
 apiVersion: v1
