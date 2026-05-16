@@ -10,7 +10,10 @@ spec:
   source:
     repoURL: __ARGOCD_GIT_REPO__
     targetRevision: __ARGOCD_GIT_REVISION__
-    path: gitops/projects/workloads.yaml
+    path: gitops/projects
+    directory:
+      include: workloads.yaml
+      recurse: false
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

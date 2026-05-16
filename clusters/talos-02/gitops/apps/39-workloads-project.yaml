@@ -10,7 +10,10 @@ spec:
   source:
     repoURL: https://github.com/BordetNicolas/TalosGitOps.git
     targetRevision: main
-    path: clusters/talos-02/gitops/projects/workloads.yaml
+    path: clusters/talos-02/gitops/projects
+    directory:
+      include: workloads.yaml
+      recurse: false
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
