@@ -71,3 +71,15 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    # SSA + Helm : le champ status peut apparaître dans volumeClaimTemplates côté live.
+    - group: apps
+      kind: StatefulSet
+      jqPathExpressions:
+        - .spec.volumeClaimTemplates[]?.status
+    # Champs par défaut injectés par l'API Kubernetes après création.
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /spec/updateStrategy/type
