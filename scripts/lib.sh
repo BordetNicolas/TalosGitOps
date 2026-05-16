@@ -96,18 +96,12 @@ ensure_env() {
   done
 }
 
-# Slug d'environnement pour les hostnames ingress (<service>-<env>.<domaine>).
-# Défaut : CLUSTER sans préfixe « talos- » (ex. talos-02 → 02).
+# Slug d'environnement pour les hostnames ingress — uniquement PLATFORM_ENV (cluster.env).
 platform_env() {
-  local env="${PLATFORM_ENV:-}"
-  if [[ -z "$env" ]]; then
-    env="${CLUSTER#talos-}"
-    [[ "$env" == "$CLUSTER" ]] && env="$CLUSTER"
-  fi
-  printf '%s' "$env"
+  printf '%s' "${PLATFORM_ENV}"
 }
 
-# argocd / longhorn / grafana → argocd-02.example.com ou argocd.example.com si prd|prod.
+# argocd / longhorn / grafana → argocd-<PLATFORM_ENV>.<domaine> ou argocd.<domaine> si prd|prod.
 platform_ingress_host() {
   local service="$1"
   local env domain
@@ -122,6 +116,7 @@ platform_ingress_host() {
 
 # Renseigne ARGOCD_INGRESS_HOST / LONGHORN_INGRESS_HOST / GRAFANA_INGRESS_HOST si absents.
 export_platform_ingress_hosts() {
+  ensure_env PLATFORM_ENV CLOUDFLARE_DOMAIN
   export ARGOCD_INGRESS_HOST="${ARGOCD_INGRESS_HOST:-$(platform_ingress_host argocd)}"
   export LONGHORN_INGRESS_HOST="${LONGHORN_INGRESS_HOST:-$(platform_ingress_host longhorn)}"
   export GRAFANA_INGRESS_HOST="${GRAFANA_INGRESS_HOST:-$(platform_ingress_host grafana)}"

@@ -144,9 +144,9 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 |---|---|
 | `__ARGOCD_GIT_REPO__` | `ARGOCD_GIT_REPO` in cluster.env |
 | `__ARGOCD_GIT_REVISION__` | `ARGOCD_GIT_REVISION` |
-| `__ARGOCD_INGRESS_HOST__` | `ARGOCD_INGRESS_HOST` (auto: `argocd-<env>.<domain>` ou `argocd.<domain>` si prd/prod) |
-| `__LONGHORN_INGRESS_HOST__` | `LONGHORN_INGRESS_HOST` (même règle) |
-| `__GRAFANA_INGRESS_HOST__` | `GRAFANA_INGRESS_HOST` (même règle) |
+| `__ARGOCD_INGRESS_HOST__` | `PLATFORM_ENV` → `argocd-<env>.<domain>` ou `argocd.<domain>` si `prd`/`prod` |
+| `__LONGHORN_INGRESS_HOST__` | même règle avec `PLATFORM_ENV` |
+| `__GRAFANA_INGRESS_HOST__` | même règle avec `PLATFORM_ENV` |
 | `__METALLB_POOL_RANGE__` | `METALLB_POOL_RANGE` |
 | `__CLOUDFLARE_DOMAIN__` | `CLOUDFLARE_DOMAIN` |
 | `__UNIFI_DOMAIN__` | `UNIFI_DOMAIN` |

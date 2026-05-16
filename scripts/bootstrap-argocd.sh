@@ -12,10 +12,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 require_cmd helm
 require_cmd kubectl
 
-ensure_env \
-  ARGOCD_GIT_REPO \
-  ARGOCD_GIT_REVISION \
-  ARGOCD_INGRESS_HOST
+ensure_env ARGOCD_GIT_REPO ARGOCD_GIT_REVISION
+export_platform_ingress_hosts
+ensure_env ARGOCD_INGRESS_HOST
 
 ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-8.3.0}"
 export KUBECONFIG="${KUBECONFIG_PATH}"
