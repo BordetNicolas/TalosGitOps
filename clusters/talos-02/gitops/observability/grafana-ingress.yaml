@@ -13,7 +13,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: grafana-test.alexetnico.com
+    - host: grafana-qa.alexetnico.com
       http:
         paths:
           - path: /
@@ -25,5 +25,5 @@ spec:
                   number: 80
   tls:
     - hosts:
-        - grafana-test.alexetnico.com
+        - grafana-qa.alexetnico.com
       secretName: grafana-tls

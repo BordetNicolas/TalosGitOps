@@ -124,10 +124,28 @@ normalize_unifi_host() {
   printf '%s' "$h"
 }
 
-# Renseigne ARGOCD_INGRESS_HOST / LONGHORN_INGRESS_HOST / GRAFANA_INGRESS_HOST si absents.
+# True si la variable est définie explicitement dans cluster.env (pas l'environnement hérité).
+cluster_env_has() {
+  local var="$1"
+  [[ -f "${CLUSTER_DIR}/cluster.env" ]] || return 1
+  grep -qE "^[[:space:]]*${var}=" "${CLUSTER_DIR}/cluster.env"
+}
+
+# Renseigne les hostnames ingress depuis PLATFORM_ENV (prd|prod → sans suffixe).
+# Surcharge possible uniquement via cluster.env, pas via l'environnement du shell.
 export_platform_ingress_hosts() {
+  local var service
   ensure_env PLATFORM_ENV CLOUDFLARE_DOMAIN
-  export ARGOCD_INGRESS_HOST="${ARGOCD_INGRESS_HOST:-$(platform_ingress_host argocd)}"
-  export LONGHORN_INGRESS_HOST="${LONGHORN_INGRESS_HOST:-$(platform_ingress_host longhorn)}"
-  export GRAFANA_INGRESS_HOST="${GRAFANA_INGRESS_HOST:-$(platform_ingress_host grafana)}"
+  for var in ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST; do
+    if cluster_env_has "$var"; then
+      continue
+    fi
+    case "$var" in
+      ARGOCD_INGRESS_HOST) service=argocd ;;
+      LONGHORN_INGRESS_HOST) service=longhorn ;;
+      GRAFANA_INGRESS_HOST) service=grafana ;;
+    esac
+    export "${var}=$(platform_ingress_host "$service")"
+  done
+  ensure_env ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST
 }
