@@ -14,6 +14,10 @@ spec:
     helm:
       releaseName: cilium
       values: |
+        # Filled by gitops-render from OpenTofu kubernetes_api_host (must be reachable
+        # with kubeProxyReplacement — DHCP drift of CP0 IP breaks Cilium otherwise).
+        k8sServiceHost: "__KUBERNETES_API_HOST__"
+        k8sServicePort: "6443"
         ipam:
           mode: kubernetes
         kubeProxyReplacement: true
