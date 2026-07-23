@@ -15,6 +15,9 @@ spec:
       releaseName: argocd
       values: |
         configs:
+          cm:
+            # Must match the browser URL (ingress host) or login redirects loop.
+            url: https://__ARGOCD_INGRESS_HOST__
           params:
             server.insecure: true
         server:

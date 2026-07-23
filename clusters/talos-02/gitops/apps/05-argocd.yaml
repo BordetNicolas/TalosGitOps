@@ -15,6 +15,9 @@ spec:
       releaseName: argocd
       values: |
         configs:
+          cm:
+            # Must match the browser URL (ingress host) or login redirects loop.
+            url: https://argocd-qa.alexetnico.com
           params:
             server.insecure: true
         server:
