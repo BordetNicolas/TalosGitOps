@@ -22,3 +22,6 @@ homelab-apps/
 ## Exemple
 
 Voir `clusters/talos-02/apps/10-whoami.yaml` et les manifests associés.
+
+Pour Argo Workflows : `30-workflows-argo.yaml` pointe vers le repo
+[WorkflowsArgo](https://github.com/BordetNicolas/WorkflowsArgo.git) (namespace `workflows-argo`).

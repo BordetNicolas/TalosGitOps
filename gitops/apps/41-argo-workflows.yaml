@@ -25,6 +25,7 @@ spec:
         controller:
           workflowNamespaces:
             - argo-workflows
+            - workflows-argo
         server:
           # TLS terminated at ingress-nginx (same pattern as ArgoCD).
           secure: false

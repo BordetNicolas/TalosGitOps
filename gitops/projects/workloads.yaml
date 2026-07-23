@@ -10,6 +10,7 @@ spec:
   sourceRepos:
     - "__APPS_GIT_REPO__"
     - "https://airflow.apache.org"
+    - "https://github.com/BordetNicolas/WorkflowsArgo.git"
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc
