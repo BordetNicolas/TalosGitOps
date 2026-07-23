@@ -54,7 +54,9 @@ spec:
               initialDelaySeconds: 10
               timeoutSeconds: 5
         extraArgs:
-          - --annotation-filter=external-dns.alpha.kubernetes.io/set=unifi
+          # Publish both UniFi-only and Cloudflare-annotated Ingresses into the
+          # local UniFi DNS zone (LAN). Cloudflare instance keeps set=cloudflare only.
+          - --annotation-filter=external-dns.alpha.kubernetes.io/set in (cloudflare, unifi)
         domainFilters:
           - __UNIFI_DOMAIN__
         txtOwnerId: __CLUSTER__-unifi

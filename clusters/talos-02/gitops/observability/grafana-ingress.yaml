@@ -1,5 +1,6 @@
 # Ingress that exposes the Grafana UI behind ingress-nginx.
-# Certificate is managed by cert-manager (DNS-01, ClusterIssuer letsencrypt-prod).
+# Certificate: cert-manager DNS-01 (letsencrypt-prod).
+# DNS: Cloudflare (set=cloudflare) + UniFi LAN (external-dns-unifi mirrors cloudflare).
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

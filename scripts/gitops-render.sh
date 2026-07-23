@@ -30,6 +30,11 @@ fi
 log "ingress hosts (env=$(platform_env)): argocd=${ARGOCD_INGRESS_HOST} longhorn=${LONGHORN_INGRESS_HOST} grafana=${GRAFANA_INGRESS_HOST} argowf=${ARGOWF_INGRESS_HOST}"
 [[ -n "${UNIFI_HOST:-}" ]] && log "unifi API: ${UNIFI_HOST}"
 
+# Shared ingress VIP = first address of MetalLB pool (ingress-nginx LoadBalancer).
+METALLB_VIP="${METALLB_POOL_RANGE%%-*}"
+export METALLB_VIP
+log "metallb ingress VIP: ${METALLB_VIP}"
+
 # Prefer explicit override, else OpenTofu kubernetes_api_host (same as Cilium bootstrap).
 if [[ -z "${KUBERNETES_API_HOST:-}" ]]; then
   KUBERNETES_API_HOST="$(tofu_var 'var.cluster.kubernetes_api_host' | tr -d '"' || true)"
@@ -57,6 +62,7 @@ substitute() {
     -e "s|__LONGHORN_INGRESS_HOST__|${LONGHORN_INGRESS_HOST}|g" \
     -e "s|__GRAFANA_INGRESS_HOST__|${GRAFANA_INGRESS_HOST}|g" \
     -e "s|__ARGOWF_INGRESS_HOST__|${ARGOWF_INGRESS_HOST}|g" \
+    -e "s|__METALLB_VIP__|${METALLB_VIP}|g" \
     -e "s|__METALLB_POOL_RANGE__|${METALLB_POOL_RANGE}|g" \
     -e "s|__CLOUDFLARE_DOMAIN__|${CLOUDFLARE_DOMAIN:-__CLOUDFLARE_DOMAIN__}|g" \
     -e "s|__UNIFI_DOMAIN__|${UNIFI_DOMAIN:-__UNIFI_DOMAIN__}|g" \
