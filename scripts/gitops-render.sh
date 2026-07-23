@@ -21,13 +21,13 @@ ensure_env \
   METALLB_POOL_RANGE
 
 export_platform_ingress_hosts
-ensure_env ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST
+ensure_env ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST ARGOWF_INGRESS_HOST
 
 if [[ -n "${UNIFI_HOST:-}" ]]; then
   export UNIFI_HOST="$(normalize_unifi_host)"
 fi
 
-log "ingress hosts (env=$(platform_env)): argocd=${ARGOCD_INGRESS_HOST} longhorn=${LONGHORN_INGRESS_HOST} grafana=${GRAFANA_INGRESS_HOST}"
+log "ingress hosts (env=$(platform_env)): argocd=${ARGOCD_INGRESS_HOST} longhorn=${LONGHORN_INGRESS_HOST} grafana=${GRAFANA_INGRESS_HOST} argowf=${ARGOWF_INGRESS_HOST}"
 [[ -n "${UNIFI_HOST:-}" ]] && log "unifi API: ${UNIFI_HOST}"
 
 # Prefer explicit override, else OpenTofu kubernetes_api_host (same as Cilium bootstrap).
@@ -56,6 +56,7 @@ substitute() {
     -e "s|__ARGOCD_INGRESS_HOST__|${ARGOCD_INGRESS_HOST}|g" \
     -e "s|__LONGHORN_INGRESS_HOST__|${LONGHORN_INGRESS_HOST}|g" \
     -e "s|__GRAFANA_INGRESS_HOST__|${GRAFANA_INGRESS_HOST}|g" \
+    -e "s|__ARGOWF_INGRESS_HOST__|${ARGOWF_INGRESS_HOST}|g" \
     -e "s|__METALLB_POOL_RANGE__|${METALLB_POOL_RANGE}|g" \
     -e "s|__CLOUDFLARE_DOMAIN__|${CLOUDFLARE_DOMAIN:-__CLOUDFLARE_DOMAIN__}|g" \
     -e "s|__UNIFI_DOMAIN__|${UNIFI_DOMAIN:-__UNIFI_DOMAIN__}|g" \
@@ -94,6 +95,7 @@ render_dir projects
 render_dir metallb
 render_dir argocd
 render_dir longhorn
+render_dir argo-workflows
 render_dir cert-manager
 render_dir external-dns
 render_dir doppler

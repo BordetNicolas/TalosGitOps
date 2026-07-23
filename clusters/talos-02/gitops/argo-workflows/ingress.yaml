@@ -1,0 +1,31 @@
+# Ingress that exposes the Argo Workflows UI behind ingress-nginx.
+# Certificate is managed by cert-manager (DNS-01, ClusterIssuer letsencrypt-prod).
+# DNS record is published by external-dns-cloudflare.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argo-workflows-server
+  namespace: argo-workflows
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    external-dns.alpha.kubernetes.io/set: cloudflare
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: argowf-qa.alexetnico.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argo-workflows-server
+                port:
+                  number: 2746
+  tls:
+    - hosts:
+        - argowf-qa.alexetnico.com
+      secretName: argo-workflows-server-tls

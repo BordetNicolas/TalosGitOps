@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-workflows
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  project: platform
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-workflows
+    targetRevision: 1.0.22
+    helm:
+      releaseName: argo-workflows
+      values: |
+        crds:
+          install: true
+        workflow:
+          serviceAccount:
+            create: true
+            name: argo-workflow
+          rbac:
+            create: true
+        controller:
+          workflowNamespaces:
+            - argo-workflows
+        server:
+          # TLS terminated at ingress-nginx (same pattern as ArgoCD).
+          secure: false
+          authModes:
+            - server
+          serviceType: ClusterIP
+          ingress:
+            enabled: false
+        artifactRepository: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-workflows
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
