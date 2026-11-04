@@ -1,0 +1,17 @@
+# Basic auth is enforced by ingress-nginx only: block direct in-cluster access
+# to the MCP Services so other pods cannot bypass it. Kubelet probes come from
+# the host and are allowed by Cilium.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-ingress-nginx
+  namespace: mcp
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx

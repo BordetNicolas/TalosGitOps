@@ -1,0 +1,78 @@
+# Kubernetes MCP server (containers/kubernetes-mcp-server), Streamable HTTP on /mcp.
+# In-cluster ServiceAccount: edit + view cluster-wide, plus read on cluster-scoped resources.
+# Exposed by gitops/mcp/ingress.yaml (LAN only, basic auth).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mcp-kubernetes
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "8"
+spec:
+  project: platform
+  source:
+    # OCI Helm repo declared in 05-argocd (configs.repositories, enableOCI).
+    repoURL: ghcr.io/containers/charts
+    chart: kubernetes-mcp-server
+    targetRevision: 0.1.1
+    helm:
+      releaseName: mcp-kubernetes
+      values: |
+        fullnameOverride: mcp-kubernetes
+        image:
+          version: v0.1.1
+        ingress:
+          enabled: false
+        config:
+          port: "{{ .Values.service.port }}"
+          stateless: true
+          cluster_provider_strategy: in-cluster
+          toolsets:
+            - core
+        rbac:
+          create: true
+          extraClusterRoles:
+            - name: cluster-read
+              rules:
+                - apiGroups: [""]
+                  resources: ["nodes", "persistentvolumes"]
+                  verbs: ["get", "list", "watch"]
+                - apiGroups: ["storage.k8s.io"]
+                  resources: ["storageclasses", "csidrivers", "csinodes", "volumeattachments"]
+                  verbs: ["get", "list", "watch"]
+                - apiGroups: ["apiextensions.k8s.io"]
+                  resources: ["customresourcedefinitions"]
+                  verbs: ["get", "list", "watch"]
+                - apiGroups: ["networking.k8s.io"]
+                  resources: ["ingressclasses"]
+                  verbs: ["get", "list", "watch"]
+                - apiGroups: ["metrics.k8s.io"]
+                  resources: ["nodes", "pods"]
+                  verbs: ["get", "list"]
+          extraClusterRoleBindings:
+            - name: cluster-read
+              roleRef:
+                name: cluster-read
+            - name: view
+              roleRef:
+                name: view
+                external: true
+            - name: edit
+              roleRef:
+                name: edit
+                external: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mcp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

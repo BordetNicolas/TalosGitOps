@@ -303,6 +303,78 @@ git add clusters/<name>/gitops/ && git commit && git push
 
 `external-dns` and `cert-manager` namespaces are created at wave 1 so Doppler can write managed Secrets before Helm apps start.
 
+## MCP servers (opencode)
+
+Three MCP servers run in namespace `mcp` (Streamable HTTP on `/mcp`), for use by opencode:
+
+| Server | ArgoCD app | Host (`PLATFORM_ENV=qa`) | Upstream credentials |
+|--------|------------|--------------------------|----------------------|
+| Kubernetes (`containers/kubernetes-mcp-server`) | `45-mcp-kubernetes` | `mcp-k8s-qa.<domain>` | ServiceAccount: `edit` + `view` + cluster-scoped read |
+| ArgoCD (`argoproj-labs/mcp-for-argocd`) | `47-mcp` (`gitops/mcp/`) | `mcp-argocd-qa.<domain>` | ArgoCD local account `mcp` (`role:admin`) |
+| Grafana (`grafana/mcp-grafana`) | `46-mcp-grafana` | `mcp-grafana-qa.<domain>` | Grafana service account `mcp` (Editor) |
+
+- **LAN only**: ingresses use `external-dns.alpha.kubernetes.io/set: unifi` (no Cloudflare record). TLS is still issued by cert-manager (DNS-01).
+- **Auth**: ingress-nginx basic auth (`Secret/mcp-basic-auth`). A `NetworkPolicy` only lets ingress-nginx reach the MCP pods, so it cannot be bypassed from inside the cluster.
+- Write access is enabled. Changes made through the Kubernetes MCP to resources owned by an ArgoCD app with `selfHeal` are reverted: use Git (or the ArgoCD MCP) for those.
+
+### One-time setup
+
+Doppler keys (same project/config as the other secrets):
+
+| Doppler key | Content |
+|-------------|---------|
+| `MCP_BASIC_AUTH` | htpasswd line, e.g. `printf 'opencode:%s\n' "$(openssl passwd -apr1 '<password>')"` |
+| `ARGOCD_MCP_TOKEN` | token of the ArgoCD account `mcp` |
+| `GRAFANA_MCP_TOKEN` | token of the Grafana service account `mcp` |
+
+```bash
+# ArgoCD token (after ArgoCD synced accounts.mcp from 05-argocd)
+argocd login argocd-qa.<domain> --grpc-web --username admin --password "$(make -s CLUSTER=<name> argo-pwd)"
+argocd account generate-token --account mcp
+
+# Grafana service account + token
+GRAFANA=https://grafana-qa.<domain>
+SA_ID=$(curl -s -u "admin:<grafana-admin-password>" -H 'Content-Type: application/json' \
+  -X POST "$GRAFANA/api/serviceaccounts" -d '{"name":"mcp","role":"Editor"}' | jq .id)
+curl -s -u "admin:<grafana-admin-password>" -H 'Content-Type: application/json' \
+  -X POST "$GRAFANA/api/serviceaccounts/$SA_ID/tokens" -d '{"name":"mcp"}' | jq -r .key
+```
+
+Pods in `mcp` stay in `CreateContainerConfigError` until the Doppler keys exist; Doppler syncs them within a minute.
+
+### opencode configuration
+
+Export `MCP_BASIC_AUTH_B64=$(printf 'opencode:<password>' | base64)`, then in `~/.config/opencode/opencode.json`:
+
+```jsonc
+{
+  "mcp": {
+    "servers": {
+      "k8s": {
+        "type": "remote",
+        "url": "https://mcp-k8s-qa.<domain>/mcp",
+        "oauth": false,
+        "headers": { "Authorization": "Basic {env:MCP_BASIC_AUTH_B64}" }
+      },
+      "argocd": {
+        "type": "remote",
+        "url": "https://mcp-argocd-qa.<domain>/mcp",
+        "oauth": false,
+        "headers": { "Authorization": "Basic {env:MCP_BASIC_AUTH_B64}" }
+      },
+      "grafana": {
+        "type": "remote",
+        "url": "https://mcp-grafana-qa.<domain>/mcp",
+        "oauth": false,
+        "headers": { "Authorization": "Basic {env:MCP_BASIC_AUTH_B64}" }
+      }
+    }
+  }
+}
+```
+
+Check with `opencode mcp list`.
+
 ## Day-2 operations
 
 ### Scaling

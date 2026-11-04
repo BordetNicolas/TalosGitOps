@@ -9,6 +9,12 @@ kind: Namespace
 metadata:
   name: external-dns
 ---
+# MCP servers (Kubernetes, ArgoCD, Grafana) consumed by opencode.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp
+---
 # node-exporter (hostNetwork, hostPath) + composants observabilité sur Talos PSS.
 apiVersion: v1
 kind: Namespace

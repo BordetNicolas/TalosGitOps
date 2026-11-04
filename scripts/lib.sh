@@ -136,7 +136,8 @@ cluster_env_has() {
 export_platform_ingress_hosts() {
   local var service
   ensure_env PLATFORM_ENV CLOUDFLARE_DOMAIN
-  for var in ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST ARGOWF_INGRESS_HOST; do
+  for var in ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST ARGOWF_INGRESS_HOST \
+    MCP_K8S_INGRESS_HOST MCP_ARGOCD_INGRESS_HOST MCP_GRAFANA_INGRESS_HOST; do
     if cluster_env_has "$var"; then
       continue
     fi
@@ -145,8 +146,12 @@ export_platform_ingress_hosts() {
       LONGHORN_INGRESS_HOST) service=longhorn ;;
       GRAFANA_INGRESS_HOST) service=grafana ;;
       ARGOWF_INGRESS_HOST) service=argowf ;;
+      MCP_K8S_INGRESS_HOST) service=mcp-k8s ;;
+      MCP_ARGOCD_INGRESS_HOST) service=mcp-argocd ;;
+      MCP_GRAFANA_INGRESS_HOST) service=mcp-grafana ;;
     esac
     export "${var}=$(platform_ingress_host "$service")"
   done
-  ensure_env ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST ARGOWF_INGRESS_HOST
+  ensure_env ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST ARGOWF_INGRESS_HOST \
+    MCP_K8S_INGRESS_HOST MCP_ARGOCD_INGRESS_HOST MCP_GRAFANA_INGRESS_HOST
 }

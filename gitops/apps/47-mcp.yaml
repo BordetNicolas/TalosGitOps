@@ -1,0 +1,25 @@
+# ArgoCD MCP server + MCP ingresses (LAN only, basic auth) + NetworkPolicy.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mcp
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "8"
+spec:
+  project: platform
+  source:
+    repoURL: __ARGOCD_GIT_REPO__
+    targetRevision: __ARGOCD_GIT_REVISION__
+    path: gitops/mcp
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mcp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

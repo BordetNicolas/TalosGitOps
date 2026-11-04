@@ -18,6 +18,18 @@ spec:
           cm:
             # Must match the browser URL (ingress host) or login redirects loop.
             url: https://__ARGOCD_INGRESS_HOST__
+            # Local account used by the ArgoCD MCP server (token stored in Doppler).
+            accounts.mcp: apiKey
+          rbac:
+            policy.csv: |
+              g, mcp, role:admin
+          repositories:
+            # OCI Helm registry (kubernetes-mcp-server chart).
+            containers-charts:
+              name: containers-charts
+              url: ghcr.io/containers/charts
+              type: helm
+              enableOCI: "true"
           params:
             server.insecure: true
         server:

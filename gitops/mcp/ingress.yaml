@@ -1,0 +1,109 @@
+# MCP ingresses behind ingress-nginx, LAN only.
+# DNS: UniFi only (set=unifi); no Cloudflare record is published.
+# Certificate: cert-manager DNS-01 (letsencrypt-prod) still works for the LAN-only host.
+# Auth: basic auth, Secret/mcp-basic-auth (key "auth", htpasswd line from Doppler MCP_BASIC_AUTH).
+# Long timeouts and no buffering for Streamable HTTP (SSE responses).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mcp-kubernetes
+  namespace: mcp
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: mcp-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "MCP"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    external-dns.alpha.kubernetes.io/set: unifi
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: __MCP_K8S_INGRESS_HOST__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-kubernetes
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - __MCP_K8S_INGRESS_HOST__
+      secretName: mcp-kubernetes-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mcp-argocd
+  namespace: mcp
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: mcp-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "MCP"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    external-dns.alpha.kubernetes.io/set: unifi
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: __MCP_ARGOCD_INGRESS_HOST__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-argocd
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - __MCP_ARGOCD_INGRESS_HOST__
+      secretName: mcp-argocd-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mcp-grafana
+  namespace: mcp
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: mcp-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "MCP"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    external-dns.alpha.kubernetes.io/set: unifi
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: __MCP_GRAFANA_INGRESS_HOST__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp-grafana
+                port:
+                  number: 8000
+  tls:
+    - hosts:
+        - __MCP_GRAFANA_INGRESS_HOST__
+      secretName: mcp-grafana-tls

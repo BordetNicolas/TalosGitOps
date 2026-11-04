@@ -1,0 +1,61 @@
+# Grafana MCP server (grafana/mcp-grafana), Streamable HTTP on /mcp.
+# Talks to the in-cluster Grafana with a service account token (Doppler: GRAFANA_MCP_TOKEN).
+# Exposed by gitops/mcp/ingress.yaml (LAN only, basic auth).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mcp-grafana
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "8"
+spec:
+  project: platform
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: grafana-mcp
+    targetRevision: 0.3.1
+    helm:
+      releaseName: mcp-grafana
+      values: |
+        fullnameOverride: mcp-grafana
+        image:
+          tag: "2.2.0"
+        grafana:
+          url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local
+          apiKeySecret:
+            name: mcp-grafana
+            key: api-key
+        # Image entrypoint defaults to SSE; later flags win.
+        extraArgs:
+          - --transport=streamable-http
+          - --address=0.0.0.0:8000
+          # Host header check: must match the ingress host. /healthz shares the
+          # listener, hence tcpSocket probes.
+          - --allowed-hosts=__MCP_GRAFANA_INGRESS_HOST__
+        readinessProbe:
+          tcpSocket:
+            port: mcp-http
+        livenessProbe:
+          tcpSocket:
+            port: mcp-http
+        volumes:
+          - name: tmp
+            emptyDir: {}
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mcp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

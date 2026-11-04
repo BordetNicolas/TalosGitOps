@@ -1,0 +1,92 @@
+# ArgoCD MCP server (argoproj-labs/mcp-for-argocd), Streamable HTTP on /mcp.
+# Calls argocd-server in-cluster with the "mcp" local account token (Doppler: ARGOCD_MCP_TOKEN).
+# Inbound auth is done by ingress-nginx (basic auth), hence --allow-unauthenticated.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-argocd
+  namespace: mcp
+  labels:
+    app.kubernetes.io/name: mcp-argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-argocd
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mcp-argocd
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mcp-argocd
+          image: ghcr.io/argoproj-labs/mcp-for-argocd:0.9.0
+          args:
+            - http
+            - --stateless
+            - --port=3000
+            - --bind-address=0.0.0.0
+            - --allow-unauthenticated
+            - --allowed-host-header=mcp-argocd-qa.alexetnico.com
+          env:
+            - name: ARGOCD_BASE_URL
+              value: http://argocd-server.argocd.svc.cluster.local
+            - name: ARGOCD_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-argocd
+                  key: ARGOCD_API_TOKEN
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-argocd
+  namespace: mcp
+  labels:
+    app.kubernetes.io/name: mcp-argocd
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: mcp-argocd
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP

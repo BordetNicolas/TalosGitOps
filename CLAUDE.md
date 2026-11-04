@@ -93,6 +93,7 @@ clusters/
       argocd/            # ArgoCD Ingress (cluster-specific host)
       cert-manager/      # ClusterIssuer (email from cluster.env)
       doppler/           # DopplerSecret CRs (tokens from Doppler)
+      mcp/               # ArgoCD MCP server, MCP ingresses (LAN, basic auth), NetworkPolicy
     kubeconfig           # gitignored
     talosconfig          # gitignored
     clusterconfig/       # gitignored (generated machineconfigs)
@@ -101,7 +102,7 @@ gitops/                  # TEMPLATES — source for gitops-render.sh
   apps/                  # ArgoCD Application templates (with __PLACEHOLDER__)
   bootstrap/root-app.yaml
   projects/platform.yaml
-  metallb/, argocd/, cert-manager/, doppler/
+  metallb/, argocd/, cert-manager/, doppler/, mcp/
 
 talos/                   # Shared Talos templates (all clusters)
   talconfig.yaml.tpl
@@ -135,6 +136,7 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 | 5 | 36-longhorn-ingress |
 | 5 | 24-external-dns-cloudflare, 25-external-dns-unifi |
 | (default) | 30-longhorn |
+| 8 | 45-mcp-kubernetes, 46-mcp-grafana, 47-mcp (ArgoCD MCP + ingresses + NetworkPolicy) |
 | 9 | 39-workloads-project (AppProject workloads) |
 | 10 | 40-workloads-root (pont vers repo apps) |
 
@@ -155,6 +157,7 @@ La plateforme (CNI, ingress, stockage, observabilité) reste dans ce repo (`ARGO
 | `__ARGOCD_INGRESS_HOST__` | `PLATFORM_ENV` → `argocd-<env>.<domain>` ou `argocd.<domain>` si `prd`/`prod` |
 | `__LONGHORN_INGRESS_HOST__` | même règle avec `PLATFORM_ENV` |
 | `__GRAFANA_INGRESS_HOST__` | même règle avec `PLATFORM_ENV` |
+| `__MCP_K8S_INGRESS_HOST__`, `__MCP_ARGOCD_INGRESS_HOST__`, `__MCP_GRAFANA_INGRESS_HOST__` | même règle (`mcp-k8s-<env>.<domain>`, etc.) |
 | `__METALLB_POOL_RANGE__` | `METALLB_POOL_RANGE` |
 | `__CLOUDFLARE_DOMAIN__` | `CLOUDFLARE_DOMAIN` |
 | `__UNIFI_DOMAIN__` | `UNIFI_DOMAIN` |
