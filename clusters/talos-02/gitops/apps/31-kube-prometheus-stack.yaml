@@ -62,6 +62,8 @@ spec:
         prometheus:
           prometheusSpec:
             retention: 15d
+            # Keep the TSDB (blocks + WAL) well below the 50Gi PVC.
+            retentionSize: 40GB
             resources:
               requests:
                 cpu: 500m

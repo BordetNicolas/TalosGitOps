@@ -1,0 +1,34 @@
+# Longhorn recurring jobs applied to every volume in the "default" group
+# (volumes without an explicit recurring job selector join this group).
+#
+# snapshot-cleanup: purges system snapshots (rebuild/expansion) and snapshots marked as removed.
+#   Without it, a rebuild snapshot can stay on disk forever and double a volume's actual size.
+# filesystem-trim: returns blocks freed inside the filesystem (e.g. Prometheus TSDB compaction)
+#   to the replica on disk; otherwise the volume head grows up to the volume's nominal size.
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: snapshot-cleanup
+  namespace: longhorn-system
+spec:
+  task: snapshot-cleanup
+  cron: "0 3 * * *"
+  groups:
+    - default
+  retain: 0
+  concurrency: 1
+  labels: {}
+---
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: filesystem-trim
+  namespace: longhorn-system
+spec:
+  task: filesystem-trim
+  cron: "0 4 * * 0"
+  groups:
+    - default
+  retain: 0
+  concurrency: 1
+  labels: {}

@@ -24,6 +24,8 @@ spec:
           defaultDataLocality: best-effort
           storageMinimalAvailablePercentage: 10
           replicaSoftAntiAffinity: false
+          # Align with the StorageClass (persistence.defaultClassReplicaCount).
+          defaultReplicaCount: 2
         persistence:
           defaultClass: true
           defaultClassReplicaCount: 2
