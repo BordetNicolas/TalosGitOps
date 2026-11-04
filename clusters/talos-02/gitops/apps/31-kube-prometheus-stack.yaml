@@ -18,7 +18,51 @@ spec:
           create: true
         alertmanager:
           enabled: true
+          # Lists replace the chart defaults (route.routes, receivers); inhibit_rules and
+          # templates are kept from the chart.
+          config:
+            route:
+              receiver: telegram
+              group_by:
+                - namespace
+                - alertname
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 12h
+              routes:
+                # Always-firing alert -> healthchecks.io: no ping = alerting pipeline is down.
+                - receiver: healthchecks
+                  matchers:
+                    - alertname = "Watchdog"
+                  group_wait: 0s
+                  group_interval: 1m
+                  repeat_interval: 5m
+                - receiver: "null"
+                  matchers:
+                    - alertname = "InfoInhibitor"
+            receivers:
+              - name: "null"
+              - name: telegram
+                telegram_configs:
+                  - bot_token_file: /etc/alertmanager/notifiers/telegram-bot-token
+                    chat_id: 2139577190
+                    send_resolved: true
+              - name: healthchecks
+                webhook_configs:
+                  - url_file: /etc/alertmanager/notifiers/healthchecks-ping-url
+                    send_resolved: false
           alertmanagerSpec:
+            # Secret alertmanager-notifiers comes from Doppler (gitops/doppler/). Optional so a
+            # missing Doppler key only breaks notifications, not the Alertmanager pod.
+            volumes:
+              - name: notifiers
+                secret:
+                  secretName: alertmanager-notifiers
+                  optional: true
+            volumeMounts:
+              - name: notifiers
+                mountPath: /etc/alertmanager/notifiers
+                readOnly: true
             resources:
               requests:
                 cpu: 50m
@@ -59,8 +103,34 @@ spec:
                   datasourceUid: loki
                   filterByTraceID: true
                   filterBySpanID: false
+        # Talos control-plane components (bind addresses: talos/patches/controlplane-cluster.yaml).
+        # kube-proxy is replaced by Cilium.
+        kubeProxy:
+          enabled: false
+        # etcd is a Talos service, not a pod: the chart's selector-based Service finds nothing,
+        # so nodes are scraped directly (job kube-etcd below). Kept enabled for rules/dashboard.
+        kubeEtcd:
+          enabled: true
+          service:
+            enabled: false
+          serviceMonitor:
+            enabled: false
         prometheus:
           prometheusSpec:
+            additionalScrapeConfigs:
+              - job_name: kube-etcd
+                kubernetes_sd_configs:
+                  - role: node
+                relabel_configs:
+                  - source_labels: [__meta_kubernetes_node_labelpresent_node_role_kubernetes_io_control_plane]
+                    regex: "true"
+                    action: keep
+                  - source_labels: [__address__]
+                    regex: ([^:]+)(?::\d+)?
+                    replacement: $1:2381
+                    target_label: __address__
+                  - source_labels: [__meta_kubernetes_node_name]
+                    target_label: node
             retention: 15d
             # ~7.8k samples/s -> ~18 GB for 15d (blocks + WAL). retentionSize caps the TSDB
             # below the 30Gi PVC if ingestion grows (oldest blocks dropped first).

@@ -20,6 +20,11 @@ ensure_env \
   APPS_GIT_REVISION \
   METALLB_POOL_RANGE
 
+# Alertmanager telegram_configs.chat_id must be an int in the config (no *_file variant):
+# an unrendered placeholder would make the whole Alertmanager config invalid.
+ensure_env TELEGRAM_CHAT_ID
+[[ "${TELEGRAM_CHAT_ID}" =~ ^-?[0-9]+$ ]] || die "TELEGRAM_CHAT_ID must be an integer (got: ${TELEGRAM_CHAT_ID})"
+
 export_platform_ingress_hosts
 ensure_env ARGOCD_INGRESS_HOST LONGHORN_INGRESS_HOST GRAFANA_INGRESS_HOST ARGOWF_INGRESS_HOST \
   MCP_K8S_INGRESS_HOST MCP_ARGOCD_INGRESS_HOST MCP_GRAFANA_INGRESS_HOST
@@ -65,6 +70,7 @@ substitute() {
     -e "s|__UNIFI_SKIP_TLS_VERIFY__|${UNIFI_SKIP_TLS_VERIFY:-true}|g" \
     -e "s|__UNIFI_HOST__|${UNIFI_HOST:-https://unifi.local}|g" \
     -e "s|__LONGHORN_BACKUP_TARGET__|${LONGHORN_BACKUP_TARGET}|g" \
+    -e "s|__TELEGRAM_CHAT_ID__|${TELEGRAM_CHAT_ID}|g" \
     -e "s|__CLUSTER__|${CLUSTER}|g" \
     -e "s|path: gitops/|path: clusters/${CLUSTER}/gitops/|g" \
     "$src" > "$dst"

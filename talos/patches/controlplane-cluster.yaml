@@ -3,5 +3,14 @@ cluster:
     certSANs:
       - ${CLUSTER_KUBERNETES_API_HOST}
       - ${CLUSTER_NAME}
-  controllerManager: {}
-  scheduler: {}
+  # Metrics endpoints reachable by Prometheus (default: 127.0.0.1 only).
+  # 10257/10259 stay HTTPS + authn/authz; etcd metrics on plain HTTP :2381.
+  controllerManager:
+    extraArgs:
+      bind-address: 0.0.0.0
+  scheduler:
+    extraArgs:
+      bind-address: 0.0.0.0
+  etcd:
+    extraArgs:
+      listen-metrics-urls: http://0.0.0.0:2381

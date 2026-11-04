@@ -166,6 +166,7 @@ La plateforme (CNI, ingress, stockage, observabilité) reste dans ce repo (`ARGO
 | `__DOPPLER_CONFIG__` | `DOPPLER_CONFIG` |
 | `DOPPLER_SERVICE_TOKEN` | via `make apply-doppler-token` only (not in gitops-render) |
 | `__LONGHORN_BACKUP_TARGET__` | `s3://${LONGHORN_BACKUP_BUCKET:-longhorn-backups}@${MINIO_REGION:-us-east-1}/${CLUSTER}/` |
+| `__TELEGRAM_CHAT_ID__` | `TELEGRAM_CHAT_ID` in cluster.env (required, integer) |
 | `__CLUSTER__` | `CLUSTER` (directory name) |
 | `path: gitops/<x>` | auto-rewritten to `path: clusters/<name>/gitops/<x>` |
 
@@ -193,6 +194,12 @@ All clusters share the same MinIO instance but use per-cluster prefixes (auto-de
 - Volumes join the `backup` group through PVC labels declared in the chart's volumeClaimTemplate (`recurring-job.longhorn.io/source`, `recurring-job-group.longhorn.io/backup`, `recurring-job-group.longhorn.io/default`): Loki `singleBinary.persistence.labels`, Airflow PostgreSQL `postgresql.primary.persistence.labels` (homelab-apps). volumeClaimTemplates are immutable: after changing them, `kubectl delete sts <name> --cascade=orphan` and let ArgoCD recreate it (PVC retention policy must be `Retain`). Labels only land on new PVCs; label existing PVCs once by hand.
 - Loki: 30d retention (compactor), PVC retention policy `Retain`.
 - Backup credentials: DopplerSecret `longhorn-backup-minio` → Secret `longhorn-system/longhorn-backup-minio` (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINTS`).
+
+## Alerting
+
+- Alertmanager (`gitops/apps/31-kube-prometheus-stack.yaml`): every alert → Telegram (`chat_id` from `TELEGRAM_CHAT_ID` in cluster.env); `Watchdog` → healthchecks.io webhook every 5 min (dead man's switch: configure the check with period 5 min, grace 10 min).
+- Credentials: DopplerSecret `alertmanager-notifiers` → Secret `monitoring/alertmanager-notifiers` (`telegram-bot-token`, `healthchecks-ping-url` ← Doppler `ALERTMANAGER_TELEGRAM_BOT_TOKEN`, `HEALTHCHECKS_PING_URL`), mounted optional on `/etc/alertmanager/notifiers`.
+- Control-plane metrics: scheduler/controller-manager bind `0.0.0.0` and etcd exposes `:2381` (`talos/patches/controlplane-cluster.yaml`, apply with `make talos-config`). etcd is scraped through node discovery (job `kube-etcd`), kube-proxy monitoring is disabled (Cilium replaces it).
 
 ## Configuration Files
 
