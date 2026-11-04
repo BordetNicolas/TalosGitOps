@@ -50,6 +50,11 @@ hubble:
     auto:
       method: cronJob
 
+certgen:
+  annotations:
+    job:
+      argocd.argoproj.io/hook-delete-policy: HookSucceeded
+
 envoy:
   updateStrategy:
     type: RollingUpdate
