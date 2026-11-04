@@ -190,7 +190,8 @@ All clusters share the same MinIO instance but use per-cluster prefixes (auto-de
 
 - Settings (`gitops/apps/30-longhorn.yaml`): reserved 10% per default disk, over-provisioning 100%, minimal available 15%. `storageReservedPercentageForDefaultDisk` only applies to new disks — existing disks: `kubectl -n longhorn-system patch nodes.longhorn.io <node> --type merge -p '{"spec":{"disks":{"<disk>":{"storageReserved":<bytes>}}}}'`.
 - Recurring jobs (`gitops/longhorn/recurringjobs.yaml`): `snapshot-cleanup` + `filesystem-trim` (group `default`, all volumes), `backup-daily` (group `backup`, retain 7).
-- Volumes join the `backup` group through PVC labels: `make CLUSTER=<name> longhorn-backup-labels` (Loki, Airflow PostgreSQL). Re-run whenever those PVCs are recreated.
+- Volumes join the `backup` group through PVC labels declared in the chart's volumeClaimTemplate (`recurring-job.longhorn.io/source`, `recurring-job-group.longhorn.io/backup`, `recurring-job-group.longhorn.io/default`): Loki `singleBinary.persistence.labels`, Airflow PostgreSQL `postgresql.primary.persistence.labels` (homelab-apps). volumeClaimTemplates are immutable: after changing them, `kubectl delete sts <name> --cascade=orphan` and let ArgoCD recreate it (PVC retention policy must be `Retain`). Labels only land on new PVCs; label existing PVCs once by hand.
+- Loki: 30d retention (compactor), PVC retention policy `Retain`.
 - Backup credentials: DopplerSecret `longhorn-backup-minio` → Secret `longhorn-system/longhorn-backup-minio` (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINTS`).
 
 ## Configuration Files

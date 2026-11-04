@@ -53,6 +53,12 @@ spec:
             # Chart default is Delete: deleting/scaling the StatefulSet would delete the data.
             whenDeleted: Retain
             whenScaled: Retain
+            # Longhorn recurring jobs (gitops/longhorn/recurringjobs.yaml): daily backup + default
+            # group (snapshot-cleanup, filesystem-trim). "source" makes Longhorn sync PVC labels to the volume.
+            labels:
+              recurring-job.longhorn.io/source: enabled
+              recurring-job-group.longhorn.io/backup: enabled
+              recurring-job-group.longhorn.io/default: enabled
         # Memcached caches (defaults: chunks 8Gi) — disable on homelab SingleBinary;
         # workers ~8Gi RAM cannot schedule loki-chunks-cache-0.
         chunksCache:

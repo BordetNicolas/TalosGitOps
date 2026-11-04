@@ -31,7 +31,6 @@
 #   upload-kubeconfig push kubeconfig to MinIO
 #   gitops-render    render gitops/ templates into clusters/<name>/gitops/
 #   minio-buckets    create MinIO buckets (idempotent)
-#   longhorn-backup-labels attach important PVCs to the Longhorn backup job
 #   argo-pwd         print initial ArgoCD admin password
 #   status           show nodes and ArgoCD app status
 #   clean            remove local generated files for this cluster
@@ -63,7 +62,7 @@ endif
 .PHONY: help up down init-cluster \
         minio-buckets tofu-init tofu-plan tofu-apply tofu-publish \
         talos-config talos-bootstrap fetch-kubeconfig argocd-bootstrap \
-        upload-kubeconfig gitops-render apply-doppler-token argo-pwd longhorn-backup-labels \
+        upload-kubeconfig gitops-render apply-doppler-token argo-pwd \
         status clean check-cluster
 
 .DEFAULT_GOAL := help
@@ -167,9 +166,6 @@ apply-doppler-token: check-cluster ## Apply Doppler service token Secret (never 
 	$(ROOT_DIR)/scripts/apply-doppler-token.sh
 
 # ---------- Operations -------------------------------------------------------
-
-longhorn-backup-labels: check-cluster ## Attach Loki / Airflow PostgreSQL PVCs to the Longhorn backup job.
-	$(ROOT_DIR)/scripts/longhorn-backup-labels.sh
 
 argo-pwd: check-cluster ## Print the initial ArgoCD admin password.
 	@KUBECONFIG=$(CLUSTER_DIR)/kubeconfig kubectl -n argocd get secret argocd-initial-admin-secret \

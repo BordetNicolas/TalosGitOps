@@ -36,8 +36,8 @@ spec:
   labels: {}
 ---
 # Daily backup to the MinIO backup target (incremental), 7 restore points kept.
-# Only volumes in the "backup" group: PVC labels set by `make longhorn-backup-labels`
-# (PVCs created by StatefulSets: Loki, Airflow PostgreSQL).
+# Only volumes in the "backup" group, joined through PVC labels declared in the charts'
+# volumeClaimTemplates (Loki: gitops/apps/32-loki.yaml; Airflow PostgreSQL: homelab-apps).
 # Runs before snapshot-cleanup (03:00). Cron in UTC.
 apiVersion: longhorn.io/v1beta2
 kind: RecurringJob
