@@ -23,6 +23,10 @@ spec:
             type: LoadBalancer
             externalTrafficPolicy: Local
           allowSnippetAnnotations: false
+          # Default true: a terminating leader clears Ingress .status, and external-dns
+          # (policy sync) then deletes the public DNS records until a new leader republishes.
+          extraArgs:
+            update-status-on-shutdown: "false"
           metrics:
             enabled: true
             serviceMonitor:
