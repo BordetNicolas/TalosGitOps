@@ -21,6 +21,14 @@ spec:
             replication_factor: 1
           storage:
             type: filesystem
+          # Retention: compactor deletes chunks older than retention_period (~65 MB/day stored).
+          compactor:
+            working_directory: /var/loki/compactor
+            retention_enabled: true
+            retention_delete_delay: 2h
+            delete_request_store: filesystem
+          limits_config:
+            retention_period: 30d
           schemaConfig:
             configs:
               - from: "2024-04-01"
@@ -42,6 +50,9 @@ spec:
             enabled: true
             storageClass: longhorn
             size: 30Gi
+            # Chart default is Delete: deleting/scaling the StatefulSet would delete the data.
+            whenDeleted: Retain
+            whenScaled: Retain
         # Memcached caches (defaults: chunks 8Gi) — disable on homelab SingleBinary;
         # workers ~8Gi RAM cannot schedule loki-chunks-cache-0.
         chunksCache:
