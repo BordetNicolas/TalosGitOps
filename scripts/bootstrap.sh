@@ -304,14 +304,31 @@ cmd_apply() {
 
   read_cluster_info
 
+  # Use talosconfig (secure mode) if the cluster is already bootstrapped,
+  # otherwise fall back to insecure mode for initial provisioning.
+  local secure_mode=false
+  if [[ -f "${TALOSCONFIG_PATH}" ]]; then
+    export TALOSCONFIG="${TALOSCONFIG_PATH}"
+    if talosctl version --nodes "$(first_control_plane_ipv4)" &>/dev/null; then
+      secure_mode=true
+    fi
+  fi
+
   while IFS=$'\t' read -r hostname ip; do
     local cfg="${CLUSTERCONFIG_DIR}/${CLUSTER_NAME}-${hostname}.yaml"
     [[ -f "$cfg" ]] || die "missing machineconfig for ${hostname}: ${cfg}"
-    log "applying config to ${hostname} (${ip}) [insecure mode]"
-    talosctl apply-config \
-      --insecure \
-      --nodes "$ip" \
-      --file "$cfg"
+    if $secure_mode; then
+      log "applying config to ${hostname} (${ip})"
+      talosctl apply-config \
+        --nodes "$ip" \
+        --file "$cfg"
+    else
+      log "applying config to ${hostname} (${ip}) [insecure mode]"
+      talosctl apply-config \
+        --insecure \
+        --nodes "$ip" \
+        --file "$cfg"
+    fi
   done < <(
     {
       tofu_output control_plane_nodes |
