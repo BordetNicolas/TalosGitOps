@@ -62,8 +62,9 @@ spec:
         prometheus:
           prometheusSpec:
             retention: 15d
-            # Keep the TSDB (blocks + WAL) well below the 50Gi PVC.
-            retentionSize: 40GB
+            # ~7.8k samples/s -> ~18 GB for 15d (blocks + WAL). retentionSize caps the TSDB
+            # below the 30Gi PVC if ingestion grows (oldest blocks dropped first).
+            retentionSize: 25GB
             resources:
               requests:
                 cpu: 500m
@@ -78,7 +79,7 @@ spec:
                     - ReadWriteOnce
                   resources:
                     requests:
-                      storage: 50Gi
+                      storage: 30Gi
         prometheusOperator:
           resources:
             requests:

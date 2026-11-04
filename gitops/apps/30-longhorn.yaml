@@ -22,7 +22,21 @@ spec:
           # Must match worker disk mount (Talos): first Longhorn disk → /var/lib/longhorn
           defaultDataPath: /var/lib/longhorn
           defaultDataLocality: best-effort
-          storageMinimalAvailablePercentage: 10
+          # Capacity model (dedicated 100 GiB data disk per worker, nothing else on it):
+          # - reserved 10% (was the 30% default): the 30% default suits disks shared with the OS;
+          #   here it only blocked replica rebuilds (no node could host a 50Gi replica).
+          #   Applies to NEW default disks only; existing disks: patch spec.disks.*.storageReserved.
+          # - over-provisioning 100%: sum of nominal volume sizes never exceeds disk - reserve,
+          #   so every volume can always grow to its full size.
+          # - minimal available 15%: stop scheduling replicas when real free space < 15 GiB;
+          #   leaves room for snapshots (backup retain) on top of nominal sizes.
+          storageReservedPercentageForDefaultDisk: 10
+          storageOverProvisioningPercentage: 100
+          storageMinimalAvailablePercentage: 15
+          # MinIO bucket, per-cluster prefix (s3://<bucket>@<region>/<cluster>/).
+          # Credentials: Secret longhorn-backup-minio (Doppler, see gitops/doppler/).
+          backupTarget: __LONGHORN_BACKUP_TARGET__
+          backupTargetCredentialSecret: longhorn-backup-minio
           replicaSoftAntiAffinity: false
           # Align with the StorageClass (persistence.defaultClassReplicaCount).
           defaultReplicaCount: 2

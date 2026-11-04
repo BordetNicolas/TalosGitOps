@@ -31,6 +31,7 @@ fi
 log "ingress hosts (env=$(platform_env)): argocd=${ARGOCD_INGRESS_HOST} longhorn=${LONGHORN_INGRESS_HOST} grafana=${GRAFANA_INGRESS_HOST} argowf=${ARGOWF_INGRESS_HOST}"
 log "mcp ingress hosts: k8s=${MCP_K8S_INGRESS_HOST} argocd=${MCP_ARGOCD_INGRESS_HOST} grafana=${MCP_GRAFANA_INGRESS_HOST}"
 [[ -n "${UNIFI_HOST:-}" ]] && log "unifi API: ${UNIFI_HOST}"
+log "longhorn backup target: ${LONGHORN_BACKUP_TARGET}"
 
 # Shared ingress VIP = first address of MetalLB pool (ingress-nginx LoadBalancer).
 METALLB_VIP="${METALLB_POOL_RANGE%%-*}"
@@ -77,6 +78,7 @@ substitute() {
     -e "s|__UNIFI_SKIP_TLS_VERIFY__|${UNIFI_SKIP_TLS_VERIFY:-true}|g" \
     -e "s|__UNIFI_HOST__|${UNIFI_HOST:-https://unifi.local}|g" \
     -e "s|__KUBERNETES_API_HOST__|${KUBERNETES_API_HOST}|g" \
+    -e "s|__LONGHORN_BACKUP_TARGET__|${LONGHORN_BACKUP_TARGET}|g" \
     -e "s|__CLUSTER__|${CLUSTER}|g" \
     -e "s|path: gitops/|path: clusters/${CLUSTER}/gitops/|g" \
     "$src" > "$dst"

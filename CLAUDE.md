@@ -165,6 +165,7 @@ La plateforme (CNI, ingress, stockage, observabilité) reste dans ce repo (`ARGO
 | `__DOPPLER_PROJECT__` | `DOPPLER_PROJECT` |
 | `__DOPPLER_CONFIG__` | `DOPPLER_CONFIG` |
 | `DOPPLER_SERVICE_TOKEN` | via `make apply-doppler-token` only (not in gitops-render) |
+| `__LONGHORN_BACKUP_TARGET__` | `s3://${LONGHORN_BACKUP_BUCKET:-longhorn-backups}@${MINIO_REGION:-us-east-1}/${CLUSTER}/` |
 | `__CLUSTER__` | `CLUSTER` (directory name) |
 | `path: gitops/<x>` | auto-rewritten to `path: clusters/<name>/gitops/<x>` |
 
@@ -180,7 +181,17 @@ All clusters share the same MinIO instance but use per-cluster prefixes (auto-de
 <MINIO_KUBECONFIG_BUCKET>/
   talos-01/kubeconfig
   talos-02/kubeconfig
+
+<LONGHORN_BACKUP_BUCKET>/        # Longhorn backup target (default: longhorn-backups)
+  talos-02/backupstore/...
 ```
+
+## Longhorn Storage & Backups
+
+- Settings (`gitops/apps/30-longhorn.yaml`): reserved 10% per default disk, over-provisioning 100%, minimal available 15%. `storageReservedPercentageForDefaultDisk` only applies to new disks — existing disks: `kubectl -n longhorn-system patch nodes.longhorn.io <node> --type merge -p '{"spec":{"disks":{"<disk>":{"storageReserved":<bytes>}}}}'`.
+- Recurring jobs (`gitops/longhorn/recurringjobs.yaml`): `snapshot-cleanup` + `filesystem-trim` (group `default`, all volumes), `backup-daily` (group `backup`, retain 7).
+- Volumes join the `backup` group through PVC labels: `make CLUSTER=<name> longhorn-backup-labels` (Loki, Airflow PostgreSQL). Re-run whenever those PVCs are recreated.
+- Backup credentials: DopplerSecret `longhorn-backup-minio` → Secret `longhorn-system/longhorn-backup-minio` (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINTS`).
 
 ## Configuration Files
 

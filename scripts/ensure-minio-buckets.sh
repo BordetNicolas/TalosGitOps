@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Create the MinIO buckets required by OpenTofu (state) and kubeconfig upload
-# if they do not exist yet. OpenTofu's S3 backend returns NoSuchBucket when the
+# Create the MinIO buckets required by OpenTofu (state), kubeconfig upload and
+# Longhorn backups if they do not exist yet. OpenTofu's S3 backend returns NoSuchBucket when the
 # bucket is missing — credentials can still be valid.
 
 set -euo pipefail
@@ -29,7 +29,7 @@ mc alias set --quiet "${ALIAS}" \
   "${AWS_ACCESS_KEY_ID}" \
   "${AWS_SECRET_ACCESS_KEY}"
 
-for bucket in "${MINIO_STATE_BUCKET}" "${MINIO_KUBECONFIG_BUCKET}"; do
+for bucket in "${MINIO_STATE_BUCKET}" "${MINIO_KUBECONFIG_BUCKET}" "${LONGHORN_BACKUP_BUCKET}"; do
   log "ensuring bucket exists: ${bucket}"
   mc mb --ignore-existing "${ALIAS}/${bucket}" >/dev/null
 done

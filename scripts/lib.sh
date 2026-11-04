@@ -36,6 +36,11 @@ MINIO_STATE_KEY="${MINIO_STATE_KEY:-${CLUSTER}/terraform.tfstate}"
 MINIO_KUBECONFIG_KEY="${MINIO_KUBECONFIG_KEY:-${CLUSTER}/kubeconfig}"
 export MINIO_STATE_KEY MINIO_KUBECONFIG_KEY
 
+# Longhorn backups: shared bucket, per-cluster prefix (s3://<bucket>@<region>/<cluster>/).
+LONGHORN_BACKUP_BUCKET="${LONGHORN_BACKUP_BUCKET:-longhorn-backups}"
+LONGHORN_BACKUP_TARGET="${LONGHORN_BACKUP_TARGET:-s3://${LONGHORN_BACKUP_BUCKET}@${MINIO_REGION:-us-east-1}/${CLUSTER}/}"
+export LONGHORN_BACKUP_BUCKET LONGHORN_BACKUP_TARGET
+
 log()  { printf '\033[1;34m[%s]\033[0m %s\n' "$(date +%H:%M:%S)" "$*"; }
 warn() { printf '\033[1;33m[%s] WARN:\033[0m %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
 err()  { printf '\033[1;31m[%s] ERROR:\033[0m %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
