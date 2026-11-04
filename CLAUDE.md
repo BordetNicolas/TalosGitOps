@@ -128,7 +128,7 @@ ArgoCD root app watches `clusters/<name>/gitops/apps/` and syncs in wave order:
 | Wave | Apps |
 |------|------|
 | -2 | 00-cilium (adoption of existing) |
-| -1 | 05-argocd (self-managed) |
+| -1 | 04-platform-project (AppProject platform, Prune/Delete=false), 05-argocd (self-managed) |
 | 0 | 11-metallb-config (namespace PSS privileged + IP pool) |
 | 1 | 16-platform-namespaces, 10-metallb, 18-doppler-operator |
 | 2 | 17-doppler-secrets, 19-cert-manager, 20-ingress-nginx |

@@ -3,6 +3,9 @@ kind: AppProject
 metadata:
   name: platform
   namespace: argocd
+  annotations:
+    # Synced by platform-project, which itself belongs to this project: never prune/delete it.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
