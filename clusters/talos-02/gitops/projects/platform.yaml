@@ -23,6 +23,8 @@ spec:
     - "https://prometheus-community.github.io/helm-charts"
     - "https://grafana.github.io/helm-charts"
     - "ghcr.io/containers/charts"
+    - "https://github.com/alex1989hu/kubelet-serving-cert-approver"
+    - "https://kubernetes-sigs.github.io/metrics-server/"
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc
