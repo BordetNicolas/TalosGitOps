@@ -1,5 +1,6 @@
 # Kubernetes MCP server (containers/kubernetes-mcp-server), Streamable HTTP on /mcp.
-# In-cluster ServiceAccount: edit + view cluster-wide, plus read on cluster-scoped resources.
+# In-cluster ServiceAccount: edit + view cluster-wide, plus read on cluster-scoped resources,
+# Longhorn CRs and nodes/proxy (kubelet stats).
 # Exposed by gitops/mcp/ingress.yaml (LAN only, basic auth).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -49,6 +50,13 @@ spec:
                 - apiGroups: ["metrics.k8s.io"]
                   resources: ["nodes", "pods"]
                   verbs: ["get", "list"]
+                # Kubelet Summary API via the apiserver proxy (nodes_stats_summary tool).
+                - apiGroups: [""]
+                  resources: ["nodes/proxy"]
+                  verbs: ["get"]
+                - apiGroups: ["longhorn.io"]
+                  resources: ["*"]
+                  verbs: ["get", "list", "watch"]
           extraClusterRoleBindings:
             - name: cluster-read
               roleRef:
