@@ -15,3 +15,4 @@ machine:
     extraConfig:
       shutdownGracePeriod: 30s
       shutdownGracePeriodCriticalPods: 10s
+      serverTLSBootstrap: true
