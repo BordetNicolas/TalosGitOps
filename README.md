@@ -455,8 +455,9 @@ mc rm "${MINIO_ENDPOINT%/}/${MINIO_KUBECONFIG_BUCKET}/${MINIO_KUBECONFIG_KEY}"
   already bootstrapped. Re-run `make talos-bootstrap` if needed.
 - **Cilium pods CrashLoopBackOff**: confirm `kubeProxyReplacement: true` and
   that `kubeProxy.disabled = true` is in the cluster patch (it is, in
-  `talos/patches/cluster-common-base.yaml`). `k8sServiceHost` est fixé à
-  l’output `kubernetes_api_host` par `bootstrap-argocd.sh`.
+  `talos/patches/cluster-common-base.yaml`). Cilium joint l’API via KubePrism
+  (`k8sServiceHost: localhost`, `k8sServicePort: 7445`) : vérifier que
+  `machine.features.kubePrism` n’est pas désactivé.
 - **Longhorn cannot find disks**: check `kubectl -n longhorn-system get
   nodes.longhorn.io <node> -o yaml`. Verify that
   `/var/mnt/longhorn-0` is present and writable inside the worker

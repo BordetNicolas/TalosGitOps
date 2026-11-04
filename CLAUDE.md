@@ -218,7 +218,7 @@ From `clusters/terraform.tfvars.example`. Controls cluster sizing:
 ## Troubleshooting
 
 - **API unreachable `:6443`**: Check first CP DHCP IP via `tofu -chdir=tofu output -json control_plane_nodes -var-file=clusters/<name>/terraform.tfvars`. Override with `cluster.kubernetes_api_host` in tfvars.
-- **Cilium pods CrashLoopBackOff**: Verify `kubeProxyReplacement: true` and `cluster.proxy.disabled: true` in `talos/patches/cluster-common-base.yaml`. Check that the `k8sServiceHost` in the inline manifest matches the actual control-plane IP.
+- **Cilium pods CrashLoopBackOff**: Verify `kubeProxyReplacement: true` and `cluster.proxy.disabled: true` in `talos/patches/cluster-common-base.yaml`. Cilium reaches the API through KubePrism (`k8sServiceHost: localhost`, `k8sServicePort: 7445`); check that `machine.features.kubePrism` is not disabled.
 - **Longhorn cannot find disks**: First Longhorn disk must mount at `/var/lib/longhorn` (Talos worker patch). Use label `node.longhorn.io/create-default-disk=true` (not `config` without `default-disks-config` annotation). Verify `df` inside `longhorn-manager` pod shows the data disk.
 - **gitops-render not run**: `bootstrap-argocd.sh` checks for `clusters/<name>/gitops/bootstrap/root-app.yaml` and fails with a clear message if missing.
 - **tofu console fails**: Ensure `CLUSTER` is exported and `clusters/<name>/terraform.tfvars` exists before running bootstrap scripts directly.

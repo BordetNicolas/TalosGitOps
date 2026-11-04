@@ -105,8 +105,6 @@ render_cilium_inline_manifest() {
       --namespace kube-system \
       --version "${CILIUM_CHART_VERSION:-1.16.4}" \
       --values "${BOOTSTRAP_DIR}/cilium-values.yaml" \
-      --set k8sServiceHost="${CLUSTER_KUBERNETES_API_HOST}" \
-      --set k8sServicePort=6443 \
       | sed 's/\${BIN_PATH}/$${BIN_PATH}/g' \
       | sed 's/^/        /'
   } > "$out"

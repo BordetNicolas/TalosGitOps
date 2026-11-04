@@ -14,10 +14,14 @@ spec:
     helm:
       releaseName: cilium
       values: |
-        # Filled by gitops-render from OpenTofu kubernetes_api_host (must be reachable
-        # with kubeProxyReplacement — DHCP drift of CP0 IP breaks Cilium otherwise).
-        k8sServiceHost: "192.168.15.208"
-        k8sServicePort: "6443"
+        # KubePrism (Talos node-local API load balancer, enabled by default):
+        # survives the loss of any single control-plane node.
+        k8sServiceHost: localhost
+        k8sServicePort: "7445"
+        updateStrategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxUnavailable: 1
         ipam:
           mode: kubernetes
         kubeProxyReplacement: true
@@ -49,6 +53,16 @@ spec:
             enabled: true
           ui:
             enabled: false
+          # certgen Job/CronJob instead of Helm-generated certs: stable manifests
+          # (no drift on every render) and periodic rotation.
+          tls:
+            auto:
+              method: cronJob
+        envoy:
+          updateStrategy:
+            type: RollingUpdate
+            rollingUpdate:
+              maxUnavailable: 1
         operator:
           replicas: 1
   destination:

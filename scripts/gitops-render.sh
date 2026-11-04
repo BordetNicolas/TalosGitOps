@@ -38,19 +38,6 @@ METALLB_VIP="${METALLB_POOL_RANGE%%-*}"
 export METALLB_VIP
 log "metallb ingress VIP: ${METALLB_VIP}"
 
-# Prefer explicit override, else OpenTofu kubernetes_api_host (same as Cilium bootstrap).
-if [[ -z "${KUBERNETES_API_HOST:-}" ]]; then
-  KUBERNETES_API_HOST="$(tofu_var 'var.cluster.kubernetes_api_host' | tr -d '"' || true)"
-  if [[ -z "${KUBERNETES_API_HOST}" || "${KUBERNETES_API_HOST}" == "null" ]]; then
-    KUBERNETES_API_HOST="$(tofu_output_raw kubernetes_api_host || true)"
-  fi
-fi
-if [[ -z "${KUBERNETES_API_HOST}" || "${KUBERNETES_API_HOST}" == "null" ]]; then
-  die "KUBERNETES_API_HOST unset and OpenTofu kubernetes_api_host unavailable. Set cluster.kubernetes_api_host in terraform.tfvars or export KUBERNETES_API_HOST."
-fi
-export KUBERNETES_API_HOST
-log "kubernetes API host: ${KUBERNETES_API_HOST}"
-
 SRC="${GITOPS_TEMPLATES_DIR}"
 DST="${GITOPS_DIR}"
 
@@ -77,7 +64,6 @@ substitute() {
     -e "s|__DOPPLER_CONFIG__|${DOPPLER_CONFIG:-__DOPPLER_CONFIG__}|g" \
     -e "s|__UNIFI_SKIP_TLS_VERIFY__|${UNIFI_SKIP_TLS_VERIFY:-true}|g" \
     -e "s|__UNIFI_HOST__|${UNIFI_HOST:-https://unifi.local}|g" \
-    -e "s|__KUBERNETES_API_HOST__|${KUBERNETES_API_HOST}|g" \
     -e "s|__LONGHORN_BACKUP_TARGET__|${LONGHORN_BACKUP_TARGET}|g" \
     -e "s|__CLUSTER__|${CLUSTER}|g" \
     -e "s|path: gitops/|path: clusters/${CLUSTER}/gitops/|g" \

@@ -6,6 +6,15 @@ ipam:
 
 kubeProxyReplacement: true
 
+# KubePrism (Talos node-local API load balancer, enabled by default).
+k8sServiceHost: localhost
+k8sServicePort: "7445"
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
 # Talos-specific socket / cgroup paths.
 cgroup:
   autoMount:
@@ -31,14 +40,21 @@ securityContext:
       - SYS_ADMIN
       - SYS_RESOURCE
 
-# Cilium replaces kube-proxy ; k8sServiceHost est injecté par bootstrap-argocd.sh
-# (output OpenTofu kubernetes_api_host, même hôte que l’endpoint talconfig).
 hubble:
   enabled: true
   relay:
     enabled: true
   ui:
     enabled: false
+  tls:
+    auto:
+      method: cronJob
+
+envoy:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
 
 operator:
   replicas: 1
