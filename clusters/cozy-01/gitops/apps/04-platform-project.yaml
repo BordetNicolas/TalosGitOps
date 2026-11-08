@@ -1,0 +1,28 @@
+# AppProject platform: bootstrapped by kubectl (bootstrap-argocd.sh), then kept in
+# sync from Git here so new sourceRepos reach the cluster. Early wave so project
+# changes land before the apps that need them.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-project
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/BordetNicolas/TalosGitOps.git
+    targetRevision: feat/cozy-01
+    path: clusters/cozy-01/gitops/projects
+    directory:
+      include: platform.yaml
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

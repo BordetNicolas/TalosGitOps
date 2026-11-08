@@ -1,0 +1,29 @@
+# Cozystack operator (chart cozy-installer): CRDs (Package, PackageSource), operator, Flux sources.
+# First installed by scripts/bootstrap-cozystack.sh (the CNI must exist before ArgoCD can run
+# any pod); ArgoCD then adopts the release and keeps the version pinned to Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cozystack-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: platform
+  source:
+    # OCI Helm repo declared in 05-argocd (configs.repositories, enableOCI).
+    repoURL: ghcr.io/cozystack/cozystack
+    chart: cozy-installer
+    targetRevision: 1.7.0
+    helm:
+      releaseName: cozystack
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cozy-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

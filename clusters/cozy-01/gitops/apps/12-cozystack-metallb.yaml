@@ -1,0 +1,33 @@
+# MetalLB address pool for Cozystack (namespace/CRDs created by the platform install, which
+# takes several minutes: retry until they exist).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cozystack-metallb
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/BordetNicolas/TalosGitOps.git
+    targetRevision: feat/cozy-01
+    path: clusters/cozy-01/gitops/cozystack-metallb
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cozy-metallb
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 30
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
