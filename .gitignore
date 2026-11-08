@@ -42,3 +42,13 @@ talos/patches/*.generated.yaml
 *.swp
 *~
 clusters/talos-02/terraform.tfvars
+
+# cozy-01: tfvars Proxmox contient le token (comme talos-02)
+clusters/cozy-01/terraform.tfvars
+
+# Artefacts Talos générés par cluster (flavor cozystack) — contiennent talsecret
+clusters/*/talos/
+
+# OpenTofu UniFi (state dans MinIO)
+tofu/unifi/.terraform/
+tofu/unifi/.terraform.lock.hcl

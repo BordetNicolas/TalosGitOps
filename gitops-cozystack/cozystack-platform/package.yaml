@@ -1,0 +1,32 @@
+# Cozystack Platform Package (v1.7). Also applied once by scripts/bootstrap-cozystack.sh so the
+# CNI exists before ArgoCD is installed; the file content must stay the single source of truth.
+apiVersion: cozystack.io/v1alpha1
+kind: Package
+metadata:
+  name: cozystack.cozystack-platform
+spec:
+  variant: isp-full
+  components:
+    platform:
+      values:
+        publishing:
+          host: "__COZY_ROOT_HOST__"
+          apiServerEndpoint: "https://api.__COZY_ROOT_HOST__:443"
+          exposedServices:
+            - dashboard
+            - api
+          # Root host is LAN-only (UniFi DNS): HTTP-01 cannot validate, use DNS-01 on Cloudflare.
+          # Secret cloudflare-api-token-secret (key api-token) comes from `make cozystack-secrets`.
+          certificates:
+            solver: dns01
+            issuerName: letsencrypt-prod
+            dns01:
+              provider: cloudflare
+              cloudflare:
+                secretName: cloudflare-api-token-secret
+                secretKey: api-token
+        networking:
+          podCIDR: "10.244.0.0/16"
+          podGateway: "10.244.0.1"
+          serviceCIDR: "10.96.0.0/16"
+          joinCIDR: "100.64.0.0/16"

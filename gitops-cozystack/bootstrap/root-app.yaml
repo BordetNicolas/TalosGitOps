@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  source:
+    repoURL: __ARGOCD_GIT_REPO__
+    targetRevision: __ARGOCD_GIT_REVISION__
+    path: clusters/__CLUSTER__/gitops/apps
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    # Argo CD 3 injecte tracking-id sur les Applications enfants (non présent dans Git).
+    - group: argoproj.io
+      kind: Application
+      jqPathExpressions:
+        - .metadata.annotations["argocd.argoproj.io/tracking-id"]
+    # directory.recurse=false est implicite ; le live omet souvent le bloc directory.
+    - group: argoproj.io
+      kind: Application
+      jsonPointers:
+        - /spec/source/directory
+    # Permet des correctifs sur les apps enfants avant push Git (ignoreDifferences, syncOptions).
+    - group: argoproj.io
+      kind: Application
+      jqPathExpressions:
+        - .spec.ignoreDifferences
+        - .spec.syncPolicy.syncOptions

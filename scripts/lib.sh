@@ -41,10 +41,32 @@ LONGHORN_BACKUP_BUCKET="${LONGHORN_BACKUP_BUCKET:-longhorn-backups}"
 LONGHORN_BACKUP_TARGET="${LONGHORN_BACKUP_TARGET:-s3://${LONGHORN_BACKUP_BUCKET}@${MINIO_REGION:-us-east-1}/${CLUSTER}/}"
 export LONGHORN_BACKUP_BUCKET LONGHORN_BACKUP_TARGET
 
+PLATFORM_FLAVOR="${PLATFORM_FLAVOR:-standard}"
+export PLATFORM_FLAVOR
+
 log()  { printf '\033[1;34m[%s]\033[0m %s\n' "$(date +%H:%M:%S)" "$*"; }
 warn() { printf '\033[1;33m[%s] WARN:\033[0m %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
 err()  { printf '\033[1;31m[%s] ERROR:\033[0m %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
 die()  { err "$@"; exit 1; }
+
+# PLATFORM_FLAVOR (cluster.env):
+#   standard  – Cilium inline + stack ArgoCD (gitops/)
+#   cozystack – Cozystack platform (gitops-cozystack/, talos/cozystack/)
+# Talos work dir: shared talos/ for standard, per-cluster clusters/<name>/talos/
+# for cozystack so two clusters never overwrite each other's generated files.
+case "${PLATFORM_FLAVOR}" in
+  standard)
+    TALOS_SRC_DIR="${TALOS_DIR}"
+    TALOS_WORK_DIR="${TALOS_DIR}"
+    ;;
+  cozystack)
+    GITOPS_TEMPLATES_DIR="${ROOT_DIR}/gitops-cozystack"
+    TALOS_SRC_DIR="${TALOS_DIR}/cozystack"
+    TALOS_WORK_DIR="${CLUSTER_DIR}/talos"
+    ;;
+  *) die "PLATFORM_FLAVOR must be 'standard' or 'cozystack' (got: ${PLATFORM_FLAVOR})" ;;
+esac
+export TALOS_SRC_DIR TALOS_WORK_DIR
 
 require_cmd() {
   local cmd="$1"

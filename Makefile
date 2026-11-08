@@ -17,6 +17,10 @@
 #
 #   3. make CLUSTER=talos-01 up              # full pipeline
 #
+# Cozystack clusters (PLATFORM_FLAVOR=cozystack in cluster.env) add UniFi
+# (VLAN + DNS), the Cozystack operator/platform bootstrap, secrets and storage
+# steps to `up` — see docs/cozystack.md.
+#
 # Targets:
 #   up               full pipeline (VMs + Talos + ArgoCD + kubeconfig)
 #   down             destroy the cluster (MinIO state kept)
@@ -34,6 +38,10 @@
 #   argo-pwd         print initial ArgoCD admin password
 #   status           show nodes and ArgoCD app status
 #   clean            remove local generated files for this cluster
+#   unifi-plan|unifi-apply|unifi-destroy   VLAN + DNS on UniFi (cozystack flavor)
+#   cozystack-bootstrap  install cozy-installer + Platform Package (before ArgoCD)
+#   cozystack-secrets    Cloudflare token for DNS-01 certificates
+#   cozystack-storage    LINSTOR ZFS pools on the workers
 # =============================================================================
 
 SHELL      := /usr/bin/env bash
@@ -60,6 +68,8 @@ ifneq ($(CLUSTER),)
 endif
 
 .PHONY: help up down init-cluster \
+        unifi-init unifi-plan unifi-apply unifi-destroy \
+        cozystack-bootstrap cozystack-secrets cozystack-storage \
         minio-buckets tofu-init tofu-plan tofu-apply tofu-publish \
         talos-config talos-bootstrap fetch-kubeconfig argocd-bootstrap \
         upload-kubeconfig gitops-render apply-doppler-token argo-pwd \
@@ -113,7 +123,13 @@ check-cluster:
 minio-buckets: check-cluster ## Create state, kubeconfig and Longhorn backup buckets on MinIO (idempotent).
 	$(ROOT_DIR)/scripts/ensure-minio-buckets.sh
 
-up: check-cluster tofu-init tofu-apply talos-config talos-bootstrap argocd-bootstrap apply-doppler-token upload-kubeconfig tofu-publish ## Full pipeline: VMs → Talos → ArgoCD → kubeconfig.
+ifeq ($(PLATFORM_FLAVOR),cozystack)
+UP_STEPS := check-cluster unifi-apply tofu-init tofu-apply talos-config talos-bootstrap cozystack-bootstrap argocd-bootstrap upload-kubeconfig tofu-publish cozystack-secrets cozystack-storage
+else
+UP_STEPS := check-cluster tofu-init tofu-apply talos-config talos-bootstrap argocd-bootstrap apply-doppler-token upload-kubeconfig tofu-publish
+endif
+
+up: $(UP_STEPS) ## Full pipeline: VMs → Talos → ArgoCD → kubeconfig (cozystack: + UniFi, operator, storage).
 	@echo "==> Cluster $(CLUSTER) ready. Run 'make CLUSTER=$(CLUSTER) argo-pwd' for the ArgoCD password."
 
 down: check-cluster ## Destroy all resources for this cluster (MinIO state kept).
@@ -165,6 +181,41 @@ apply-doppler-token: check-cluster ## Apply Doppler service token Secret (never 
 	@chmod +x $(ROOT_DIR)/scripts/apply-doppler-token.sh
 	$(ROOT_DIR)/scripts/apply-doppler-token.sh
 
+# ---------- UniFi (VLAN + DNS, cozystack flavor) -----------------------------
+# Separate OpenTofu root (tofu/unifi), state key <cluster>/unifi.tfstate, vars in
+# clusters/<name>/unifi.tfvars. Needs UNIFI_API / UNIFI_API_KEY in cluster.env.
+
+UNIFI_DIR  := $(TOFU_DIR)/unifi
+UNIFI_VARS := $(CLUSTER_DIR)/unifi.tfvars
+
+unifi-init: check-cluster minio-buckets ## Initialise the UniFi OpenTofu root (VLAN + DNS) on MinIO.
+	@test -f "$(UNIFI_VARS)" || { echo "ERROR: $(UNIFI_VARS) missing"; exit 1; }
+	@: $${UNIFI_API?missing UNIFI_API} $${UNIFI_API_KEY?missing UNIFI_API_KEY}
+	tofu -chdir=$(UNIFI_DIR) init -reconfigure \
+	  -backend-config="bucket=$(MINIO_STATE_BUCKET)" \
+	  -backend-config="key=$(CLUSTER)/unifi.tfstate" \
+	  -backend-config="endpoints={s3=\"$(MINIO_ENDPOINT)\"}"
+
+unifi-plan: unifi-init ## Preview UniFi VLAN + DNS changes.
+	tofu -chdir=$(UNIFI_DIR) plan -var-file=$(UNIFI_VARS)
+
+unifi-apply: unifi-init ## Create/update the cluster VLAN and DNS records on UniFi.
+	tofu -chdir=$(UNIFI_DIR) apply -auto-approve -var-file=$(UNIFI_VARS)
+
+unifi-destroy: unifi-init ## Remove the cluster VLAN and DNS records from UniFi.
+	tofu -chdir=$(UNIFI_DIR) destroy -auto-approve -var-file=$(UNIFI_VARS)
+
+# ---------- Cozystack --------------------------------------------------------
+
+cozystack-bootstrap: check-cluster ## Install cozy-installer + Platform Package (CNI), wait for nodes Ready.
+	$(ROOT_DIR)/scripts/bootstrap-cozystack.sh
+
+cozystack-secrets: check-cluster ## Apply the Cloudflare token Secret used for DNS-01 certificates.
+	$(ROOT_DIR)/scripts/apply-cozystack-secrets.sh
+
+cozystack-storage: check-cluster ## Create the LINSTOR ZFS storage pools on the workers.
+	$(ROOT_DIR)/scripts/cozystack-storage.sh
+
 # ---------- Operations -------------------------------------------------------
 
 argo-pwd: check-cluster ## Print the initial ArgoCD admin password.
@@ -186,5 +237,5 @@ clean: check-cluster ## Remove local generated files for this cluster (does not 
 	      $(ROOT_DIR)/talos/patches/cluster-network.generated.yaml \
 	      $(ROOT_DIR)/talos/patches/worker.generated.yaml \
 	      $(ROOT_DIR)/talos/patches/cilium-inline-manifest.generated.yaml
-	rm -rf $(CLUSTER_DIR)/clusterconfig
+	rm -rf $(CLUSTER_DIR)/clusterconfig $(CLUSTER_DIR)/talos
 	rm -f $(CLUSTER_DIR)/clusterconfig/worker-recovery.patch.yaml 2>/dev/null || true

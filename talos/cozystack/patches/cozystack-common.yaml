@@ -1,0 +1,73 @@
+# Patch commun à tous les nœuds Cozystack (CP + workers), d'après la doc Cozystack v1.7
+# « Use talosctl to bootstrap a Cozystack cluster ». Rendu par envsubst
+# (${NODE_SUBNET}) vers cozystack-common.generated.yaml.
+machine:
+  kubelet:
+    nodeIP:
+      validSubnets:
+        - ${NODE_SUBNET}
+    extraConfig:
+      maxPods: 512
+      shutdownGracePeriod: 30s
+      shutdownGracePeriodCriticalPods: 10s
+  sysctls:
+    net.ipv4.neigh.default.gc_thresh1: "4096"
+    net.ipv4.neigh.default.gc_thresh2: "8192"
+    net.ipv4.neigh.default.gc_thresh3: "16384"
+  kernel:
+    modules:
+      - name: openvswitch
+      - name: drbd
+        parameters:
+          - usermode_helper=disabled
+      # Talos 1.14 ne le charge plus à la demande : sans lui DRBD ne se connecte à aucun pair.
+      - name: drbd_transport_tcp
+      - name: zfs
+      - name: spl
+      - name: vfio_pci
+      - name: vfio_iommu_type1
+  registries:
+    mirrors:
+      docker.io:
+        endpoints:
+          - https://mirror.gcr.io
+  files:
+    # Les ops ne doivent pas être changées : Talos refuse « create » hors /var
+    # (sauf ce fichier précis) et « overwrite » est requis pour lvm.conf.
+    - content: |
+        [plugins]
+          [plugins."io.containerd.cri.v1.runtime"]
+            device_ownership_from_security_context = true
+      path: /etc/cri/conf.d/20-customization.part
+      op: create
+    - op: overwrite
+      path: /etc/lvm/lvm.conf
+      permissions: 0o644
+      content: |
+        backup {
+          backup = 0
+          archive = 0
+        }
+        devices {
+          global_filter = [ "r|^/dev/drbd.*|", "r|^/dev/dm-.*|", "r|^/dev/zd.*|", "r|^/dev/loop.*|" ]
+        }
+
+# Talos 1.14 : réseau, proxy et discovery ne sont plus des champs cluster.* du document
+# v1alpha1 mais des documents dédiés (KubeProxyConfig : control planes seulement, voir
+# cozystack-controlplane.yaml) (talhelper les génère par défaut ; les mélanger avec
+# les anciens champs est refusé). Mêmes valeurs que le guide Cozystack.
+---
+apiVersion: v1alpha1
+kind: KubeNetworkConfig
+dnsDomain: cozy.local
+podSubnets:
+  - 10.244.0.0/16
+serviceSubnets:
+  - 10.96.0.0/16
+---
+# discovery.enabled: false du guide Cozystack = suppression du document par défaut.
+# « $$ » : talhelper fait un envsubst strict ; $$patch devient le $patch littéral de Talos.
+apiVersion: v1alpha1
+kind: DiscoveryServiceConfig
+name: default
+$$patch: delete

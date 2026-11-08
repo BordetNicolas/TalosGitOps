@@ -1,0 +1,40 @@
+# Réservé aux control-planes Cozystack. Rendu par envsubst vers
+# cozystack-controlplane.generated.yaml
+# (${K8S_API_VIP}, ${NODE_SUBNET}, ${CLUSTER_KUBERNETES_API_HOST}, ${CLUSTER_NAME}).
+machine:
+  network:
+    interfaces:
+      # Sélection par type plutôt que par nom : sur Proxmox/q35 l'interface s'appelle
+      # ens18 et non eth0. L'IP des nœuds reste en DHCP ; la VIP flotte entre les 3 CP.
+      - deviceSelector:
+          physical: true
+        dhcp: true
+        vip:
+          ip: ${K8S_API_VIP}
+cluster:
+  etcd:
+    advertisedSubnets:
+      - ${NODE_SUBNET}
+# Talos 1.14 : apiserver / controller-manager / scheduler = documents dédiés.
+---
+apiVersion: v1alpha1
+kind: KubeAPIServerConfig
+certExtraSANs:
+  - 127.0.0.1
+  - ${CLUSTER_KUBERNETES_API_HOST}
+  - ${CLUSTER_NAME}
+---
+apiVersion: v1alpha1
+kind: KubeControllerManagerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+---
+apiVersion: v1alpha1
+kind: KubeSchedulerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+---
+# kube-proxy remplacé par Cilium (installé par Cozystack).
+apiVersion: v1alpha1
+kind: KubeProxyConfig
+enabled: false

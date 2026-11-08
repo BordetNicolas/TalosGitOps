@@ -1,0 +1,21 @@
+# Range outside the UniFi DHCP pool; the first address serves the root tenant ingress
+# (DNS: tofu/unifi, ingress_ip). L2 mode: nodes share one L2 segment (same VLAN).
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: cozystack
+  namespace: cozy-metallb
+spec:
+  addresses:
+    - __COZY_EXTERNAL_IP_RANGE__
+  autoAssign: true
+  avoidBuggyIPs: false
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: cozystack
+  namespace: cozy-metallb
+spec:
+  ipAddressPools:
+    - cozystack

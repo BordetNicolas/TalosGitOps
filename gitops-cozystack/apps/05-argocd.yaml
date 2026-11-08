@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: platform
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-cd
+    targetRevision: __ARGOCD_CHART_VERSION__
+    helm:
+      releaseName: argocd
+      values: |
+        configs:
+          cm:
+            # Must match the browser URL (ingress host) or login redirects loop.
+            url: https://__ARGOCD_INGRESS_HOST__
+          repositories:
+            # OCI Helm registry of the Cozystack operator chart (cozy-installer).
+            cozystack-charts:
+              name: cozystack-charts
+              url: ghcr.io/cozystack/cozystack
+              type: helm
+              enableOCI: "true"
+          params:
+            server.insecure: true
+        server:
+          service:
+            type: ClusterIP
+          extraArgs:
+            - --insecure
+          ingress:
+            enabled: false
+        dex:
+          enabled: false
+        notifications:
+          enabled: false
+        applicationSet:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

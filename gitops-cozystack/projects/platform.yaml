@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    # Synced by platform-project, which itself belongs to this project: never prune/delete it.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Cozystack platform bootstrap (operator, Platform Package, MetalLB pool, storage classes) and ArgoCD itself.
+  sourceRepos:
+    - "__ARGOCD_GIT_REPO__"
+    - "https://argoproj.github.io/argo-helm"
+    - "ghcr.io/cozystack/cozystack"
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
