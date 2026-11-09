@@ -15,7 +15,7 @@ spec:
     targetRevision: feat/cozy-01
     path: clusters/cozy-01/gitops/projects
     directory:
-      include: platform.yaml
+      include: "{platform,lab}.yaml"
       recurse: false
   destination:
     server: https://kubernetes.default.svc

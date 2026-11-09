@@ -42,6 +42,7 @@
 #   cozystack-bootstrap  install cozy-installer + Platform Package (before ArgoCD)
 #   cozystack-secrets    Cloudflare token for DNS-01 certificates
 #   cozystack-storage    LINSTOR ZFS pools on the workers
+#   cozystack-tenant-cluster  register tenant k8s cluster "workflows" as an ArgoCD destination
 # =============================================================================
 
 SHELL      := /usr/bin/env bash
@@ -69,7 +70,7 @@ endif
 
 .PHONY: help up down init-cluster \
         unifi-init unifi-plan unifi-apply unifi-destroy \
-        cozystack-bootstrap cozystack-secrets cozystack-storage \
+        cozystack-bootstrap cozystack-secrets cozystack-storage cozystack-tenant-cluster \
         minio-buckets tofu-init tofu-plan tofu-apply tofu-publish \
         talos-config talos-bootstrap fetch-kubeconfig argocd-bootstrap \
         upload-kubeconfig gitops-render apply-doppler-token argo-pwd \
@@ -215,6 +216,9 @@ cozystack-secrets: check-cluster ## Apply the Cloudflare token Secret used for D
 
 cozystack-storage: check-cluster ## Create the LINSTOR ZFS storage pools on the workers.
 	$(ROOT_DIR)/scripts/cozystack-storage.sh
+
+cozystack-tenant-cluster: check-cluster ## Register the tenant k8s cluster "workflows" (tenant-lab) in ArgoCD.
+	$(ROOT_DIR)/scripts/cozystack-register-tenant-cluster.sh $(or $(K8S),workflows) $(or $(TENANT_NS),tenant-lab)
 
 # ---------- Operations -------------------------------------------------------
 

@@ -1,0 +1,87 @@
+# Argo Workflows inside the tenant Kubernetes cluster "workflows" (tenant lab). The destination
+# cluster "workflows-lab" is registered at runtime by scripts/cozystack-register-tenant-cluster.sh
+# (make cozystack-tenant-cluster): its credentials never go through Git. Until it exists the
+# retry below keeps the Application from staying failed.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-workflows
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: lab
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-workflows
+    targetRevision: 1.0.22
+    helm:
+      releaseName: argo-workflows
+      values: |
+        crds:
+          install: true
+        workflow:
+          serviceAccount:
+            create: true
+            name: argo-workflow
+          rbac:
+            create: true
+        controller:
+          workflowNamespaces:
+            - argo-workflows
+        server:
+          # TLS terminated at the ingress, as for ArgoCD.
+          secure: false
+          authModes:
+            - server
+          serviceType: ClusterIP
+          ingress:
+            enabled: false
+        artifactRepository: {}
+  destination:
+    name: workflows-lab
+    namespace: argo-workflows
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 30
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-workflows-ingress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  project: lab
+  source:
+    repoURL: __ARGOCD_GIT_REPO__
+    targetRevision: __ARGOCD_GIT_REVISION__
+    path: gitops/workflows-cluster
+    directory:
+      recurse: false
+  destination:
+    name: workflows-lab
+    namespace: argo-workflows
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 30
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lab
+  namespace: argocd
+spec:
+  description: Workloads deployed in the tenant Kubernetes cluster "workflows" (tenant lab).
+  sourceRepos:
+    - "https://github.com/BordetNicolas/TalosGitOps.git"
+    - "https://argoproj.github.io/argo-helm"
+  destinations:
+    - name: workflows-lab
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

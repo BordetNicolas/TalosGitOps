@@ -15,7 +15,7 @@ spec:
     targetRevision: __ARGOCD_GIT_REVISION__
     path: gitops/projects
     directory:
-      include: platform.yaml
+      include: "{platform,lab}.yaml"
       recurse: false
   destination:
     server: https://kubernetes.default.svc
