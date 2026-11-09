@@ -1,0 +1,26 @@
+apiVersion: apps.cozystack.io/v1alpha1
+kind: Harbor
+metadata:
+  name: harbor-lab
+  namespace: tenant-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  host: harborlab.alexetnico.com
+  storageClass: local
+  core:
+    resourcesPreset: t1.small
+  registry:
+    resourcesPreset: t1.small
+  jobservice:
+    resourcesPreset: t1.nano
+  database:
+    replicas: 2
+    size: 5Gi
+  redis:
+    replicas: 2
+    size: 1Gi
+  trivy:
+    enabled: true
+    resourcesPreset: t1.nano
+    size: 5Gi

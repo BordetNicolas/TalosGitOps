@@ -1,0 +1,15 @@
+apiVersion: apps.cozystack.io/v1alpha1
+kind: NATS
+metadata:
+  name: nats-lab
+  namespace: tenant-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  replicas: 2
+  resourcesPreset: t1.nano
+  storageClass: local
+  external: false
+  jetstream:
+    enabled: true
+    size: 10Gi

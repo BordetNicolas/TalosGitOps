@@ -1,0 +1,12 @@
+apiVersion: apps.cozystack.io/v1alpha1
+kind: Tenant
+metadata:
+  name: lab
+  namespace: tenant-root
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  ingress: false
+  monitoring: false
+  etcd: false
+  seaweedfs: false

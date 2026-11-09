@@ -1,0 +1,33 @@
+# Tenant "lab" and its apps (Harbor, NATS, OpenBao, RabbitMQ, Ubuntu VM). The Tenant lives in
+# tenant-root, the apps in the tenant-lab namespace that the Tenant creates: the retry covers the
+# short window where that namespace does not exist yet.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cozystack-tenant-lab
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: platform
+  source:
+    repoURL: __ARGOCD_GIT_REPO__
+    targetRevision: __ARGOCD_GIT_REVISION__
+    path: gitops/tenants/lab
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 30
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

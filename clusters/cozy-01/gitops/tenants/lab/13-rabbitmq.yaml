@@ -1,0 +1,14 @@
+apiVersion: apps.cozystack.io/v1alpha1
+kind: RabbitMQ
+metadata:
+  name: rabbitmq-lab
+  namespace: tenant-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  replicas: 3
+  resourcesPreset: s1.nano
+  size: 10Gi
+  storageClass: local
+  version: v4.2
+  external: false

@@ -64,7 +64,7 @@ render_dir() {
 # Drop previously rendered files so a template removed from the repo disappears here too.
 rm -rf "${DST}"
 
-for d in apps bootstrap projects argocd cozystack-platform cozystack-metallb cozystack-storage cozystack-tenant; do
+for d in apps bootstrap projects argocd cozystack-platform cozystack-metallb cozystack-storage cozystack-tenant tenants/lab; do
   render_dir "$d"
 done
 
