@@ -1,0 +1,31 @@
+# Workflows (WorkflowTemplates + artifact repository) of the WorkflowsArgo repo, same source as
+# talos-02. The Secret workflows-argo/minio-artifacts is applied at runtime by
+# scripts/cozystack-workflows-secrets.sh (make cozystack-workflows-secrets).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: workflows-argo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+spec:
+  project: lab
+  source:
+    repoURL: https://github.com/BordetNicolas/WorkflowsArgo.git
+    targetRevision: main
+    path: manifests
+  destination:
+    name: workflows-lab
+    namespace: workflows-argo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 30
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

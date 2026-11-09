@@ -8,6 +8,7 @@ spec:
   sourceRepos:
     - "https://github.com/BordetNicolas/TalosGitOps.git"
     - "https://argoproj.github.io/argo-helm"
+    - "https://github.com/BordetNicolas/WorkflowsArgo.git"
   destinations:
     - name: workflows-lab
       namespace: "*"

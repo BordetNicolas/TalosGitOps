@@ -8,6 +8,7 @@ spec:
   sourceRepos:
     - "__ARGOCD_GIT_REPO__"
     - "https://argoproj.github.io/argo-helm"
+    - "https://github.com/BordetNicolas/WorkflowsArgo.git"
   destinations:
     - name: workflows-lab
       namespace: "*"
