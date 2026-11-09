@@ -1,5 +1,6 @@
 # Worker pool of the "workflows" cluster. Must be named <cluster>-<pool>. The ingress-nginx role
 # is required by addons.ingressNginx in 30-kubernetes-workflows.yaml.
+# Sized for Argo Workflows steps: 4 x (4 vCPU, 8 Gi). resources overrides instanceType.
 apiVersion: apps.cozystack.io/v1alpha1
 kind: KubernetesNodes
 metadata:
@@ -11,9 +12,11 @@ spec:
   cluster: workflows
   version: v1.35
   storageClass: replicated
-  instanceType: u1.medium
-  diskSize: 20Gi
-  minReplicas: 2
-  maxReplicas: 2
+  resources:
+    cpu: "4"
+    memory: 8Gi
+  diskSize: 30Gi
+  minReplicas: 4
+  maxReplicas: 4
   roles:
     - ingress-nginx
