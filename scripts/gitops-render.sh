@@ -13,6 +13,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 . "${SCRIPT_DIR}/lib.sh"
 
+if [[ "${PLATFORM_FLAVOR}" == "cozystack" ]]; then
+  exec "${SCRIPT_DIR}/gitops-render-cozystack.sh"
+fi
+
 ensure_env \
   ARGOCD_GIT_REPO \
   ARGOCD_GIT_REVISION \

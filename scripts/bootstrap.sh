@@ -45,7 +45,7 @@ read_cluster_info() {
 
 ensure_talhelper_secrets() {
   local cluster_secret="${CLUSTER_DIR}/talsecret.yaml"
-  local talos_secret="${TALOS_DIR}/talsecret.yaml"
+  local talos_secret="${TALOS_WORK_DIR}/talsecret.yaml"
 
   if [[ -f "${cluster_secret}" ]]; then
     cp "${cluster_secret}" "${talos_secret}"
@@ -54,7 +54,7 @@ ensure_talhelper_secrets() {
   fi
 
   log "generating talhelper secrets (one-time) → ${cluster_secret}"
-  ( cd "${TALOS_DIR}" && talhelper gensecret > talsecret.yaml )
+  ( cd "${TALOS_WORK_DIR}" && talhelper gensecret > talsecret.yaml )
   cp "${talos_secret}" "${cluster_secret}"
   log "saved ${cluster_secret} — keep this file for rebuilds; do not regenerate"
 }
@@ -87,7 +87,7 @@ read_longhorn_disk_count() {
 }
 
 render_cilium_inline_manifest() {
-  local out="${TALOS_DIR}/patches/cilium-inline-manifest.generated.yaml"
+  local out="${TALOS_WORK_DIR}/patches/cilium-inline-manifest.generated.yaml"
 
   log "rendering Cilium ${CILIUM_CHART_VERSION:-1.16.4} as Talos inline manifest"
   helm repo add cilium https://helm.cilium.io >/dev/null 2>&1 || true
@@ -113,7 +113,7 @@ render_cilium_inline_manifest() {
 }
 
 render_cluster_network_patch() {
-  local out="${TALOS_DIR}/patches/cluster-network.generated.yaml"
+  local out="${TALOS_WORK_DIR}/patches/cluster-network.generated.yaml"
   cp "${TALOS_DIR}/patches/cluster-network-dhcp.yaml" "$out"
   log "rendered ${out}"
 }
@@ -154,7 +154,7 @@ render_nodes_yaml() {
 # Generate the worker patch covering every Longhorn disk declared in the
 # tfvars. Empty if longhorn_disks is empty (compute-only workers).
 render_worker_patch() {
-  local out="${TALOS_DIR}/patches/worker.generated.yaml"
+  local out="${TALOS_WORK_DIR}/patches/worker.generated.yaml"
   if [[ "${LONGHORN_DISK_COUNT}" -eq 0 ]]; then
     cat >"$out" <<'EOF'
 # No Longhorn disks configured - workers stay compute-only.
@@ -221,7 +221,7 @@ EOF
 
 # Installer image with Image Factory extensions (iscsi-tools, etc.) from tofu schematic_id.
 render_install_image_patch() {
-  local out="${TALOS_DIR}/patches/cluster-install-image.generated.yaml"
+  local out="${TALOS_WORK_DIR}/patches/cluster-install-image.generated.yaml"
   local schematic_id
   schematic_id="$(tofu_output_raw schematic_id | tr -d '\n' | tr -d '"')"
   [[ -n "${schematic_id}" ]] || die "tofu output schematic_id is empty — run make CLUSTER=${CLUSTER} tofu-apply first"
@@ -235,20 +235,46 @@ EOF
 
 # CertSANs cluster + eth0 DHCP sur les masters.
 render_controlplane_patches() {
-  local out_cluster="${TALOS_DIR}/patches/controlplane.generated.yaml"
-  local out_cp="${TALOS_DIR}/patches/controlplane-eth-dhcp.generated.yaml"
+  local out_cluster="${TALOS_WORK_DIR}/patches/controlplane.generated.yaml"
+  local out_cp="${TALOS_WORK_DIR}/patches/controlplane-eth-dhcp.generated.yaml"
   envsubst '${CLUSTER_KUBERNETES_API_HOST}${CLUSTER_NAME}' \
     <"${TALOS_DIR}/patches/controlplane-cluster.yaml" >"$out_cluster"
   cp "${TALOS_DIR}/patches/controlplane-eth-dhcp.yaml" "$out_cp"
   log "rendered ${out_cluster} and ${out_cp}"
 }
 
+# ---------------------------------------------------------------------------
+# Cozystack flavor
+# ---------------------------------------------------------------------------
+
+# Work dir clusters/<name>/talos/ (gitignored): everything generated for this
+# cluster lands here, never in the shared talos/ tree.
+prepare_cozystack_workdir() {
+  mkdir -p "${TALOS_WORK_DIR}/patches"
+}
+
+# Cozystack needs the VIP, the node subnet and a kubernetes_api_host equal to the VIP:
+# certSANs, talosconfig endpoints and the Cozystack operator all use it.
+render_cozystack_patches() {
+  ensure_env NODE_SUBNET K8S_API_VIP
+  [[ "${CLUSTER_KUBERNETES_API_HOST}" == "${K8S_API_VIP}" ]] ||
+    die "cluster.kubernetes_api_host (${CLUSTER_KUBERNETES_API_HOST}) must equal K8S_API_VIP (${K8S_API_VIP}) — set it in clusters/${CLUSTER}/terraform.tfvars"
+  export NODE_SUBNET K8S_API_VIP
+  local vars='${NODE_SUBNET}${K8S_API_VIP}${CLUSTER_KUBERNETES_API_HOST}${CLUSTER_NAME}'
+  local f out
+  for f in common controlplane; do
+    out="${TALOS_WORK_DIR}/patches/cozystack-${f}.generated.yaml"
+    envsubst "${vars}" <"${TALOS_SRC_DIR}/patches/cozystack-${f}.yaml" >"${out}"
+    log "rendered ${out}"
+  done
+}
+
 render_talconfig() {
-  local out="${TALOS_DIR}/talconfig.yaml"
+  local out="${TALOS_WORK_DIR}/talconfig.yaml"
   # Ne substituer QUE ces variables (évite d’étendre par erreur d’autres $FOO
   # présents dans des commentaires ou le YAML injecté).
   envsubst '${CLUSTER_NAME}${CLUSTER_KUBERNETES_API_HOST}${TALOS_VERSION}${KUBERNETES_VERSION}${CONTROL_PLANE_NODES_YAML}${WORKER_NODES_YAML}' \
-    <"${TALOS_DIR}/talconfig.yaml.tpl" >"$out"
+    <"${TALOS_SRC_DIR}/talconfig.yaml.tpl" >"$out"
   log "rendered ${out}"
 }
 
@@ -277,6 +303,15 @@ cmd_render() {
     attempt=$(( attempt + 1 ))
   done
 
+  if [[ "${PLATFORM_FLAVOR}" == "cozystack" ]]; then
+    prepare_cozystack_workdir
+    render_install_image_patch
+    render_cozystack_patches
+    render_nodes_yaml
+    render_talconfig
+    return
+  fi
+
   read_longhorn_disk_count
   render_install_image_patch
   render_cluster_network_patch
@@ -293,7 +328,7 @@ cmd_genconfig() {
 
   log "generating per-node machineconfigs with talhelper"
   rm -rf "${CLUSTERCONFIG_DIR}"
-  ( cd "${TALOS_DIR}" && talhelper genconfig --out-dir "${CLUSTERCONFIG_DIR}" )
+  ( cd "${TALOS_WORK_DIR}" && talhelper genconfig --out-dir "${CLUSTERCONFIG_DIR}" )
 
   cp "${CLUSTERCONFIG_DIR}/talosconfig" "${TALOSCONFIG_PATH}"
   log "talosconfig copied to ${TALOSCONFIG_PATH}"
@@ -420,9 +455,41 @@ cmd_kubeconfig() {
   log "test : export KUBECONFIG=${KUBECONFIG_PATH} && kubectl get nodes"
 }
 
+# Cozystack installs its own CNI after this step, so nodes stay NotReady and
+# `talosctl health` (which waits for Ready nodes) cannot succeed yet. Check etcd
+# membership and the Kubernetes API instead.
+cmd_health_cozystack() {
+  local default_transport nodes endpoints members
+  default_transport="$(first_control_plane_ipv4)"
+  nodes="${TALOS_FETCH_NODES:-$default_transport}"
+  endpoints="${TALOS_FETCH_ENDPOINTS:-$nodes}"
+  local expected
+  expected="$(tofu_output control_plane_nodes | jq 'length')"
+
+  log "waiting for etcd (${expected} members) and the Kubernetes API (timeout 15m)"
+  local attempt=1
+  while true; do
+    members="$(talosctl --nodes "${nodes}" --endpoints "${endpoints}" etcd members 2>/dev/null | tail -n +2 | grep -c . || true)"
+    if [[ "${members}" -ge "${expected}" ]] &&
+       KUBECONFIG="${KUBECONFIG_PATH}" kubectl get --raw /readyz >/dev/null 2>&1; then
+      break
+    fi
+    if (( attempt >= 90 )); then
+      die "etcd members=${members}/${expected} or API not ready after ~15m"
+    fi
+    sleep 10
+    attempt=$((attempt + 1))
+  done
+  log "etcd ${members}/${expected} members, API ready (nodes stay NotReady until Cozystack installs its CNI)"
+}
+
 cmd_health() {
   export TALOSCONFIG="${TALOSCONFIG_PATH}"
   read_cluster_info
+  if [[ "${PLATFORM_FLAVOR}" == "cozystack" ]]; then
+    cmd_health_cozystack
+    return
+  fi
   local default_transport
   default_transport="$(first_control_plane_ipv4)"
   [[ -n "${default_transport}" && "${default_transport}" != "null" ]] ||

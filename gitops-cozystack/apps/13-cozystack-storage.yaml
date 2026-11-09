@@ -1,0 +1,25 @@
+# LINSTOR StorageClasses (local = default, replicated). The ZFS pools themselves are created by
+# scripts/cozystack-storage.sh (make cozystack-storage) — see docs/cozystack.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cozystack-storage
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  source:
+    repoURL: __ARGOCD_GIT_REPO__
+    targetRevision: __ARGOCD_GIT_REVISION__
+    path: gitops/cozystack-storage
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Purpose
 
-**Talos** is a GitOps-driven Kubernetes cluster provisioning system for Proxmox VE supporting **multiple clusters** (one at a time). It automates:
+**Talos** is a GitOps-driven Kubernetes cluster provisioning system for Proxmox VE supporting **multiple clusters** (one at a time; a cluster can use the standard stack or the Cozystack flavor, see below). It automates:
 
 1. **Infrastructure**: OpenTofu provisions Talos Linux VMs on Proxmox
 2. **State management**: OpenTofu state stored in MinIO S3 with per-cluster prefixes
@@ -169,6 +169,18 @@ La plateforme (CNI, ingress, stockage, observabilité) reste dans ce repo (`ARGO
 | `__TELEGRAM_CHAT_ID__` | `TELEGRAM_CHAT_ID` in cluster.env (required, integer) |
 | `__CLUSTER__` | `CLUSTER` (directory name) |
 | `path: gitops/<x>` | auto-rewritten to `path: clusters/<name>/gitops/<x>` |
+
+## Cozystack flavor (`PLATFORM_FLAVOR=cozystack`)
+
+A cluster whose `cluster.env` sets `PLATFORM_FLAVOR=cozystack` (e.g. `cozy-01`) uses the Cozystack platform instead of the standard ArgoCD stack. Full runbook: `docs/cozystack.md`.
+
+- **Templates**: `gitops-cozystack/` (rendered by `scripts/gitops-render-cozystack.sh`, dispatched from `gitops-render.sh`) and `talos/cozystack/` (talconfig + Talos 1.14 patches). The standard `gitops/` and `talos/` templates are untouched.
+- **Talos work dir**: `clusters/<name>/talos/` (gitignored), not the shared `talos/`. `TALOS_SRC_DIR` / `TALOS_WORK_DIR` come from `lib.sh`.
+- **Talos 1.14 config model**: network, proxy, discovery, apiserver, controller-manager and scheduler are dedicated documents (`KubeNetworkConfig`, `KubeProxyConfig`, `$$patch: delete` on `DiscoveryServiceConfig`…); do not use the legacy `cluster.*` fields in these patches (talhelper rejects the mix). Check changes with `talhelper genconfig` + `talosctl validate --mode metal`.
+- **Order** (`make up`): `unifi-apply` (VLAN + DNS, `tofu/unifi`, vars `clusters/<name>/unifi.tfvars`) → tofu VMs → `talos-config` → `talos-bootstrap` (checks etcd + API only; nodes stay NotReady) → `cozystack-bootstrap` (helm `cozy-installer` + Platform Package, waits for Ready nodes) → `argocd-bootstrap` (adopts operator + Package) → kubeconfig upload → `cozystack-secrets` → `cozystack-storage` (LINSTOR ZFS pool `data` on `/dev/sdb`).
+- **ArgoCD owns only**: ArgoCD, `cozystack-operator` (chart `cozy-installer`), the `cozystack.cozystack-platform` Package, MetalLB pool, StorageClasses, Tenant `root`, ArgoCD Ingress (class `tenant-root`). Everything else is installed by Cozystack through Flux — do not duplicate it under ArgoCD.
+- **cluster.env (cozystack)**: `PLATFORM_FLAVOR`, `NODE_SUBNET`, `K8S_API_VIP` (= `cluster.kubernetes_api_host` in tfvars), `COZY_EXTERNAL_IP_RANGE`, `COZYSTACK_VERSION`, `COZY_ROOT_HOST`, `CLOUDFLARE_API_TOKEN`, `UNIFI_API`, `UNIFI_API_KEY`, `UNIFI_INSECURE`. `PLATFORM_ENV`/Doppler/MetalLB-range placeholders of the standard flavor are not used.
+- **MinIO**: UniFi state lives at `<MINIO_STATE_BUCKET>/<cluster>/unifi.tfstate`.
 
 ## MinIO Layout
 

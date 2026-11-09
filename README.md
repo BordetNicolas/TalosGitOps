@@ -73,6 +73,10 @@ talos/
     +-- gen-iso.sh          # manual escape hatch for the Talos ISO
 ```
 
+> **Cozystack** : le dépôt sait aussi provisionner un cluster Talos avec la plateforme
+> [Cozystack](https://cozystack.io) (`PLATFORM_FLAVOR=cozystack`, exemple `clusters/cozy-01`).
+> Voir [`docs/cozystack.md`](docs/cozystack.md).
+
 ## Prerequisites
 
 Install on the operator's machine:

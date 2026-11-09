@@ -1,0 +1,9 @@
+apiVersion: apps.cozystack.io/v1alpha1
+kind: Tenant
+metadata:
+  name: root
+  namespace: tenant-root
+spec:
+  ingress: true
+  monitoring: true
+  etcd: true

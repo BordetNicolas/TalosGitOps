@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Bootstrap ArgoCD on a freshly bootstrapped Talos cluster, then hand control
-# to the GitOps App-of-Apps.  Cilium is already running as a Talos inline
-# manifest (applied during talos-config), so this script only needs ArgoCD.
+# to the GitOps App-of-Apps.  The CNI is already running (Cilium inline manifest for
+# the standard flavor, Cozystack's Cilium + Kube-OVN for the cozystack flavor via
+# bootstrap-cozystack.sh), so this script only needs ArgoCD.
 
 set -euo pipefail
 
@@ -13,7 +14,13 @@ require_cmd helm
 require_cmd kubectl
 
 ensure_env ARGOCD_GIT_REPO ARGOCD_GIT_REVISION
-export_platform_ingress_hosts
+if [[ "${PLATFORM_FLAVOR}" == "cozystack" ]]; then
+  # Cozystack: no PLATFORM_ENV scheme, hosts live under the root domain.
+  ensure_env COZY_ROOT_HOST
+  ARGOCD_INGRESS_HOST="${ARGOCD_INGRESS_HOST:-argocd.${COZY_ROOT_HOST}}"
+else
+  export_platform_ingress_hosts
+fi
 ensure_env ARGOCD_INGRESS_HOST
 
 ARGOCD_CHART_VERSION="${ARGOCD_CHART_VERSION:-8.3.0}"

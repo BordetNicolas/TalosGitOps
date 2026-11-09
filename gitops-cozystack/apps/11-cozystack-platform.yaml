@@ -1,0 +1,27 @@
+# Platform Package: variant, publishing (domain, certificates), networking.
+# Everything else (Cilium, Kube-OVN, MetalLB, LINSTOR, KubeVirt, monitoring...) is installed
+# and reconciled by the Cozystack operator through Flux — ArgoCD only owns this one object.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cozystack-platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: __ARGOCD_GIT_REPO__
+    targetRevision: __ARGOCD_GIT_REVISION__
+    path: gitops/cozystack-platform
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cozy-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
