@@ -1,4 +1,4 @@
-# Root tenant services (ingress, monitoring, etcd). The Tenant "root" is created by the platform;
+# Root tenant services (ingress, monitoring, etcd, seaweedfs). The Tenant "root" is created by the platform;
 # this only declares the spec fields we want (server-side apply merges them).
 apiVersion: argoproj.io/v1alpha1
 kind: Application

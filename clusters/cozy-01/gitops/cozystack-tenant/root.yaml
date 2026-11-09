@@ -7,3 +7,4 @@ spec:
   ingress: true
   monitoring: true
   etcd: true
+  seaweedfs: true
