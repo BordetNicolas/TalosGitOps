@@ -6,7 +6,7 @@ variable "proxmox" {
     insecure     = optional(bool, false)
     node         = optional(string, "pve1")
     iso_store    = optional(string, "local")
-    disk_store   = optional(string, "local-lvm")
+    disk_store   = optional(string, "nvme4t")
     bridge       = optional(string, "vmbr0")
     # Tag 802.1Q sur la vNIC (bridge vlan-aware côté hôte). Null = trafic non tagué.
     vlan_tag     = optional(number, null)
