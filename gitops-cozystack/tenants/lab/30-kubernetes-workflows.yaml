@@ -1,0 +1,21 @@
+# Tenant Kubernetes cluster hosting Argo Workflows (control plane as pods, etcd inherited from
+# tenant-root). Workers are declared separately in 31-kubernetes-nodes-workflows.yaml.
+apiVersion: apps.cozystack.io/v1alpha1
+kind: Kubernetes
+metadata:
+  name: workflows
+  namespace: tenant-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  version: v1.35
+  host: workflows.lab.cozy-01.alexetnico.com
+  storageClass: replicated
+  controlPlane:
+    replicas: 2
+  addons:
+    ingressNginx:
+      enabled: true
+      exposeMethod: Proxied
+      hosts:
+        - argo-workflows.lab.cozy-01.alexetnico.com
