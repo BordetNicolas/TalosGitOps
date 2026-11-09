@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Wire the Argo Workflows artifact repository of the tenant cluster "workflows" to the Cozystack
 # Bucket tenant-lab/workflows-artifacts (never committed: credentials and generated bucket name).
-# Reads the COSI Secret <bucket>-<user> in the tenant namespace and applies, in workflows-argo:
+# Reads the COSI Secret bucket-<bucket>-<user> in the tenant namespace and applies, in workflows-argo:
 #   - Secret    s3-artifacts          (accessKey / secretKey)
 #   - ConfigMap artifact-repositories (key default-v1, referenced by the WorkflowTemplates)
 # Usage: cozystack-workflows-secrets.sh [cluster] [tenant-ns] [bucket] [user]
@@ -20,7 +20,7 @@ TENANT_NS="${2:-tenant-lab}"
 BUCKET="${3:-workflows-artifacts}"
 USER_NAME="${4:-argo}"
 TARGET_NS="workflows-argo"
-SECRET="${BUCKET}-${USER_NAME}"
+SECRET="bucket-${BUCKET}-${USER_NAME}"
 
 log "waiting for secret ${TENANT_NS}/${SECRET} (COSI credentials)"
 for _ in $(seq 1 60); do
