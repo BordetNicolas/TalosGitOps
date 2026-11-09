@@ -22,7 +22,11 @@ machine:
           - usermode_helper=disabled
       # Talos 1.14 ne le charge plus à la demande : sans lui DRBD ne se connecte à aucun pair.
       - name: drbd_transport_tcp
+      # ARC plafonné à 4 GiB : par défaut il peut prendre ~toute la RAM de la VM, et les
+      # VM Proxmox (sans ballooning) ne rendent jamais cette mémoire à l'hôte.
       - name: zfs
+        parameters:
+          - zfs_arc_max=4294967296
       - name: spl
       - name: vfio_pci
       - name: vfio_iommu_type1

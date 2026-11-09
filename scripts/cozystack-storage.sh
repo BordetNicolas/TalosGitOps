@@ -16,7 +16,8 @@ export KUBECONFIG="${KUBECONFIG_PATH}"
 DEVICE="${LINSTOR_DEVICE:-/dev/sdb}"
 POOL="data"
 
-linstor() { kubectl exec -n cozy-linstor deploy/linstor-controller -- linstor "$@"; }
+# ASCII tables: the default UTF-8 box drawing (│) would not match the "\|" greps below.
+linstor() { kubectl exec -n cozy-linstor deploy/linstor-controller -- linstor --no-utf8 --no-color "$@"; }
 
 log "waiting for the LINSTOR controller (platform install, timeout 45m)"
 for _ in $(seq 1 270); do
@@ -45,13 +46,16 @@ done
 for n in "${WORKERS[@]}"; do
   if linstor storage-pool list -n "${n}" -s "${POOL}" 2>/dev/null | grep -qE "\| ${POOL} +\|"; then
     log "${n}: pool ${POOL} already exists"
-    continue
+  else
+    log "${n}: creating ZFS pool ${POOL} on ${DEVICE}"
+    linstor physical-storage create-device-pool zfs "${n}" "${DEVICE}" \
+      --pool-name "${POOL}" --storage-pool "${POOL}"
   fi
-  log "${n}: creating ZFS pool ${POOL} on ${DEVICE}"
-  linstor physical-storage create-device-pool zfs "${n}" "${DEVICE}" \
-    --pool-name "${POOL}" --storage-pool "${POOL}"
   # Recommended by Cozystack: let DRBD, not ZFS, handle disk failures.
-  kubectl exec -n cozy-linstor "pod/linstor-satellite.${n}" -- zpool set failmode=continue "${POOL}" ||
+  # Satellite pods come from a DaemonSet (random suffix): look them up by label + node.
+  sat="$(kubectl -n cozy-linstor get pods -l app.kubernetes.io/component=linstor-satellite \
+    --field-selector "spec.nodeName=${n}" -o jsonpath='{.items[0].metadata.name}')"
+  kubectl exec -n cozy-linstor "pod/${sat}" -- zpool set failmode=continue "${POOL}" ||
     warn "${n}: could not set failmode=continue on zpool ${POOL}"
 done
 
