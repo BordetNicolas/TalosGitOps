@@ -12,4 +12,4 @@ network = {
 root_domain = "cozy-01.alexetnico.com"
 # 1re IP du pool COZY_EXTERNAL_IP_RANGE (cluster.env).
 ingress_ip = "192.168.20.60"
-hostnames  = ["", "dashboard", "api", "grafana", "argocd"]
+hostnames  = ["", "dashboard", "api", "grafana", "argocd", "harbor"]
