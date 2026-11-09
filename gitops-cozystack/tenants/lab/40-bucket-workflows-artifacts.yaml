@@ -1,0 +1,13 @@
+# S3 bucket (SeaweedFS of tenant-root, via COSI) for the Argo Workflows artifacts and logs.
+# Credentials land in Secret tenant-lab/workflows-artifacts-argo; scripts/cozystack-workflows-secrets.sh
+# copies them into the tenant cluster "workflows" (bucket name is generated, so it cannot sit in Git).
+apiVersion: apps.cozystack.io/v1alpha1
+kind: Bucket
+metadata:
+  name: workflows-artifacts
+  namespace: tenant-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  users:
+    argo: {}

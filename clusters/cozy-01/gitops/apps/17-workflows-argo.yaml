@@ -1,5 +1,6 @@
-# Workflows (WorkflowTemplates + artifact repository) of the WorkflowsArgo repo, same source as
-# talos-02. The Secret workflows-argo/minio-artifacts is applied at runtime by
+# WorkflowTemplates of the WorkflowsArgo repo, same source as talos-02. Its artifact-repositories
+# ConfigMap points at an external MinIO, so it is excluded: the ConfigMap (same name/key) and the
+# Secret s3-artifacts are applied at runtime from the tenant-lab Bucket by
 # scripts/cozystack-workflows-secrets.sh (make cozystack-workflows-secrets).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -14,6 +15,8 @@ spec:
     repoURL: https://github.com/BordetNicolas/WorkflowsArgo.git
     targetRevision: main
     path: manifests
+    directory:
+      exclude: artifact-repositories.yaml
   destination:
     name: workflows-lab
     namespace: workflows-argo
