@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  project: platform
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: tempo
+    targetRevision: 1.24.4
+    helm:
+      releaseName: tempo
+      values: |
+        tempo:
+          reportingEnabled: false
+          retention: 168h  # 7 jours
+          metricsGenerator:
+            enabled: true
+            remoteWriteUrl: http://vmsingle-vm.tenant-root.svc.cluster.local:8429/api/v1/write
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+        persistence:
+          enabled: true
+          storageClassName: linstor-lvm-r1
+          size: 20Gi
+        serviceMonitor:
+          enabled: true
+          additionalLabels:
+            prometheus: victoriametrics
+        service:
+          type: ClusterIP
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tenant-root
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jqPathExpressions:
+        - .spec.volumeClaimTemplates[]?.status

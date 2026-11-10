@@ -1,0 +1,206 @@
+{
+  "dashboard": {
+    "title": "Demo App - Observability",
+    "tags": ["demo", "observability", "cozystack"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate (req/s)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "datasource": {"type": "prometheus", "uid": "vm"},
+            "expr": "sum(rate(http_requests_total{namespace=\"demo-app\"}[5m])) by (endpoint)",
+            "legendFormat": "{{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {"drawStyle": "line", "fillOpacity": 10}
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Error Rate (%)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "datasource": {"type": "prometheus", "uid": "vm"},
+            "expr": "sum(rate(http_requests_total{namespace=\"demo-app\",status=\"500\"}[5m])) / sum(rate(http_requests_total{namespace=\"demo-app\"}[5m])) * 100",
+            "legendFormat": "Error rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 5, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Latency (P50, P95, P99)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "datasource": {"type": "prometheus", "uid": "vm"},
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{namespace=\"demo-app\"}[5m])) by (le))",
+            "legendFormat": "P50",
+            "refId": "A"
+          },
+          {
+            "datasource": {"type": "prometheus", "uid": "vm"},
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"demo-app\"}[5m])) by (le))",
+            "legendFormat": "P95",
+            "refId": "B"
+          },
+          {
+            "datasource": {"type": "prometheus", "uid": "vm"},
+            "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace=\"demo-app\"}[5m])) by (le))",
+            "legendFormat": "P99",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {"unit": "s"}
+        }
+      },
+      {
+        "id": 4,
+        "title": "Active Pods",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+        "targets": [
+          {
+            "datasource": {"type": "prometheus", "uid": "vm"},
+            "expr": "count(kube_pod_status_phase{namespace=\"demo-app\",phase=\"Running\"})",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {"unit": "none"}
+        }
+      },
+      {
+        "id": 5,
+        "title": "Total Requests (24h)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+        "targets": [
+          {
+            "datasource": {"type": "prometheus", "uid": "vm"},
+            "expr": "sum(increase(http_requests_total{namespace=\"demo-app\"}[24h]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {"unit": "short"}
+        }
+      },
+      {
+        "id": 6,
+        "title": "CPU Usage",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "datasource": {"type": "prometheus", "uid": "vm"},
+            "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"demo-app\",container!=\"\"}[5m])) by (pod)",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {"unit": "short"}
+        }
+      },
+      {
+        "id": 7,
+        "title": "Memory Usage",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "datasource": {"type": "prometheus", "uid": "vm"},
+            "expr": "sum(container_memory_working_set_bytes{namespace=\"demo-app\",container!=\"\"}) by (pod) / 1024 / 1024",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {"unit": "decmbytes"}
+        }
+      },
+      {
+        "id": 8,
+        "title": "Recent Error Logs",
+        "type": "logs",
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 24},
+        "targets": [
+          {
+            "datasource": {"type": "loki", "uid": "victorialogs"},
+            "expr": "{namespace=\"demo-app\"} | level=\"error\"",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "wrapLogMessage": false
+        }
+      },
+      {
+        "id": 9,
+        "title": "Trace Service Graph",
+        "type": "nodeGraph",
+        "gridPos": {"h": 12, "w": 24, "x": 0, "y": 34},
+        "targets": [
+          {
+            "datasource": {"type": "tempo", "uid": "tempo"},
+            "queryType": "serviceMap",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "namespace",
+          "type": "constant",
+          "current": {"value": "demo-app", "text": "demo-app"}
+        }
+      ]
+    },
+    "time": {"from": "now-1h", "to": "now"},
+    "timepicker": {},
+    "annotations": {
+      "list": [
+        {
+          "datasource": {"type": "prometheus", "uid": "vm"},
+          "enable": true,
+          "expr": "ALERTS{namespace=\"demo-app\",alertstate=\"firing\"}",
+          "iconColor": "red",
+          "name": "Alerts",
+          "tagKeys": "alertname,severity"
+        }
+      ]
+    }
+  }
+}

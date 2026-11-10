@@ -239,6 +239,9 @@ status: check-cluster ## Show cluster nodes and ArgoCD app status.
 	@echo
 	@KUBECONFIG=$(CLUSTER_DIR)/kubeconfig kubectl -n argocd get applications.argoproj.io || true
 
+test-observability: check-cluster ## Test the observability stack (logs, metrics, traces).
+	@KUBECONFIG=$(CLUSTER_DIR)/kubeconfig $(ROOT_DIR)/scripts/test-observability.sh
+
 clean: check-cluster ## Remove local generated files for this cluster (does not touch MinIO).
 	rm -f $(CLUSTER_DIR)/kubeconfig $(CLUSTER_DIR)/talosconfig
 	rm -f $(ROOT_DIR)/talos/talconfig.yaml \

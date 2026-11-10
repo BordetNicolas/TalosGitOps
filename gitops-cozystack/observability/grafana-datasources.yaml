@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-extra-datasources
+  namespace: tenant-root
+  labels:
+    grafana_datasource: "1"
+data:
+  victorialogs.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: VictoriaLogs
+        type: victorialogs-datasource
+        uid: victorialogs
+        access: proxy
+        url: http://victoria-logs-single-server.tenant-root.svc.cluster.local:9428
+        isDefault: false
+        jsonData:
+          maxLines: 5000
+          timeInterval: 30s
+        editable: false
+
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://tempo.tenant-root.svc.cluster.local:3200
+        isDefault: false
+        jsonData:
+          httpMethod: GET
+          tracesToLogs:
+            datasourceUid: victorialogs
+            filterByTraceID: true
+            filterBySpanID: false
+          tracesToMetrics:
+            datasourceUid: vm
+          serviceMap:
+            datasourceUid: vm
+        editable: false
+
+      - name: VictoriaMetrics
+        type: prometheus
+        uid: vm
+        access: proxy
+        url: http://vmsingle-vm.tenant-root.svc.cluster.local:8429
+        isDefault: true
+        jsonData:
+          timeInterval: 30s
+          httpMethod: POST
+        editable: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-extra-plugins
+  namespace: tenant-root
+data:
+  plugins: |
+    victoriametrics-datasource
+    victorialogs-datasource

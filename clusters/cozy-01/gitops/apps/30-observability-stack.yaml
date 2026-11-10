@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/BordetNicolas/TalosGitOps.git
+    targetRevision: feat/cozy-01
+    path: clusters/cozy-01/gitops/observability
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tenant-root
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false  # tenant-root existe déjà
+      - ServerSideApply=true
