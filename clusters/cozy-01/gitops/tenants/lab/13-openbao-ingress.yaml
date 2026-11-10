@@ -1,0 +1,29 @@
+# Web UI of the tenant OpenBAO (LAN only). TLS from cert-manager (letsencrypt-prod, DNS-01), like
+# Harbor. Log in with the userpass account created by scripts/cozystack-openbao.sh, not the root token.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openbao-lab-ui
+  namespace: tenant-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: tenant-root
+  rules:
+    - host: openbao.lab.cozy-01.alexetnico.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openbao-openbao-lab-ui
+                port:
+                  number: 8200
+  tls:
+    - hosts:
+        - openbao.lab.cozy-01.alexetnico.com
+      secretName: openbao-lab-ui-tls

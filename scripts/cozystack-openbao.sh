@@ -156,6 +156,24 @@ bao write auth/kubernetes/role/external-secrets \
   policies=airflow-read ttl=1h >/dev/null
 log "KV v2 'secret/', policy airflow-read and Kubernetes auth (role external-secrets) configured"
 
+# --- 3b. human access: userpass account with a limited policy (no root token in the browser) ---
+bao_stdin policy write secret-admin - >/dev/null <<'POLICY'
+path "secret/data/*"     { capabilities = ["create", "read", "update", "patch", "delete", "list"] }
+path "secret/metadata/*" { capabilities = ["create", "read", "update", "patch", "delete", "list"] }
+path "secret/delete/*"   { capabilities = ["update"] }
+path "secret/undelete/*" { capabilities = ["update"] }
+path "secret/destroy/*"  { capabilities = ["update"] }
+POLICY
+bao auth list -format=json | jq -e 'has("userpass/")' >/dev/null || bao auth enable userpass >/dev/null
+if [[ "$(jq -r '.ui_password // empty' "${INIT_FILE}")" == "" ]]; then
+  ui_password="$(rand_hex 16)"
+  bao write auth/userpass/users/admin password="${ui_password}" policies=secret-admin token_ttl=8h token_max_ttl=24h >/dev/null
+  tmp_init="$(mktemp)"; umask 077
+  jq --arg u admin --arg p "${ui_password}" '. + {ui_user: $u, ui_password: $p}' "${INIT_FILE}" > "${tmp_init}" && mv "${tmp_init}" "${INIT_FILE}"
+  chmod 600 "${INIT_FILE}"
+  log "userpass account 'admin' (policy secret-admin) created — credentials in ${INIT_FILE} (ui_user / ui_password)"
+fi
+
 # --- 4. Airflow secrets -----------------------------------------------------------------------
 log "waiting for ${TENANT_NS}/${PG_SECRET} and ${TENANT_NS}/${LOGS_SECRET} (Cozystack Postgres and Bucket)"
 for _ in $(seq 1 60); do

@@ -100,11 +100,47 @@ spec:
 
 Le rôle actuel (`external-secrets`) n'a accès qu'à `secret/airflow/*` (politique `airflow-read`).
 
-**Interface web d'OpenBAO** (connexion avec le root token) :
+**Interface web d'OpenBAO** : `https://openbao.lab.cozy-01.alexetnico.com` (LAN uniquement, certificat
+Let's Encrypt). Connexion par la méthode **Username** avec le compte `admin` créé par le script
+(politique `secret-admin` : lecture/écriture sur `secret/*` uniquement). Les identifiants sont dans
+`clusters/cozy-01/openbao-init.json` (`ui_user`, `ui_password`) ; le root token n'est pas à utiliser dans
+le navigateur. Sans l'Ingress : `kubectl -n tenant-lab port-forward svc/openbao-openbao-lab-ui 8200:8200`.
 
-```bash
-kubectl -n tenant-lab port-forward svc/openbao-openbao-lab-ui 8200:8200   # puis http://localhost:8200
-```
+## Bonnes pratiques
+
+**Qui écrit les secrets, et comment.** Cozystack ne gère pas les utilisateurs d'OpenBAO : l'application
+déploie le coffre, et les comptes, politiques et méthodes de connexion se gèrent dans OpenBAO. Les rôles
+Cozystack d'un tenant n'ont d'ailleurs aucun accès aux Secrets Kubernetes. Il n'y a donc pas que « le code » :
+
+| Besoin | Moyen |
+|---|---|
+| Un humain saisit une valeur (mot de passe, token d'API) | Interface web, ou `bao kv put secret/<app>/<env> clé=@fichier` (jamais la valeur en clair dans la ligne de commande : elle finit dans l'historique du shell) |
+| Une valeur produite par la plateforme (mot de passe Postgres, clés S3 d'un Bucket) | Un script ou un `PushSecret` d'ESO qui copie le Secret Kubernetes vers OpenBAO, comme `cozystack-openbao.sh` |
+| La **structure** (montages, politiques, rôles, comptes) | En code, versionnée : script rejouable, ou fournisseur Terraform/OpenTofu `vault` (compatible OpenBAO) |
+| Les applications qui lisent | ESO (`ExternalSecret`) ou l'API, avec l'auth Kubernetes. Lecture seule. |
+
+La règle : **la configuration du coffre est en code, les valeurs des secrets n'y sont jamais**.
+
+1. **Pas de root token au quotidien.** Servez-vous d'un compte nominatif avec politique limitée, puis gardez
+   le root token (et `recovery_keys`) hors ligne. En cas de besoin, `bao operator generate-root` le recrée
+   à partir de la clé de récupération.
+2. **Moindre privilège, par chemin.** `secret/<application>/<environnement>`, une politique `<app>-read`
+   pour l'application (ESO, lecture seule) et une politique d'écriture séparée pour les humains.
+   Un rôle d'auth Kubernetes par application, lié à son ServiceAccount et à son namespace.
+3. **Un OpenBAO par frontière de confiance.** Dans Cozystack, l'instance appartient à un tenant : si une
+   équipe ne doit pas voir les secrets d'une autre, donnez-lui son propre tenant et sa propre application OpenBAO.
+4. **Tokens à durée courte.** Le rôle `external-secrets` a un `ttl=1h` ; le compte `admin` de l'interface
+   expire à 8 h.
+5. **Journal d'audit.** À activer : `bao audit enable file file_path=stdout` (les lignes arrivent dans les
+   logs du pod). Il n'est pas activé aujourd'hui.
+6. **Versions KV.** KV v2 garde l'historique ; limitez-le (`bao write secret/config max_versions=10`) et
+   utilisez `delete`/`destroy` selon le besoin.
+7. **Sauvegardes.** Une instance, un volume `local` : sans sauvegarde, la perte du nœud efface les secrets.
+   Sauvegardez le volume avec les outils de sauvegarde de Cozystack, et conservez à part
+   `openbao-init.json` et le Secret `openbao-unseal` (sans eux, une restauration est inutilisable).
+8. **Aller plus loin.** Le moteur *database* d'OpenBAO crée des identifiants Postgres temporaires par
+   application au lieu d'un mot de passe partagé ; une connexion OIDC (Keycloak, non installé ici)
+   remplacerait les comptes `userpass`.
 
 ## Points d'attention
 
