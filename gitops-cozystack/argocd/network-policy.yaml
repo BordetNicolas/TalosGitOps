@@ -1,0 +1,21 @@
+# Cozystack's tenant-root-egress policy only lets tenant-root pods reach namespaces labelled
+# tenant.cozystack.io/tenant-root. The argocd namespace is not one of them, so the root
+# ingress-nginx cannot reach argocd-server (504). Allow exactly that flow, nothing more.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-to-argocd-server
+  namespace: tenant-root
+spec:
+  endpointSelector:
+    matchLabels:
+      cozystack.io/service: ingress
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: argocd
+            app.kubernetes.io/name: argocd-server
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
