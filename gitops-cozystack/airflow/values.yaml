@@ -182,6 +182,9 @@ dagProcessor:
 
 triggerer:
   enabled: true
+  # Chart default is a 100Gi replicated volume for logs; task logs go to the Bucket instead.
+  persistence:
+    enabled: false
   resources:
     requests:
       cpu: 100m
