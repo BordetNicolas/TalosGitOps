@@ -1,0 +1,40 @@
+# Apache Airflow in the tenant Kubernetes cluster "workflows" (same chart/version as talos-02).
+# Values: gitops/airflow/values.yaml of this repo. Needs the Secrets airflow-credentials and
+# airflow-s3-logs (airflow-secrets Application, filled by scripts/cozystack-openbao.sh).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: airflow
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+spec:
+  project: lab
+  sources:
+    - repoURL: https://airflow.apache.org
+      chart: airflow
+      targetRevision: "1.21.0"
+      helm:
+        releaseName: airflow
+        valueFiles:
+          - $values/clusters/cozy-01/gitops/airflow/values.yaml
+    - repoURL: https://github.com/BordetNicolas/TalosGitOps.git
+      targetRevision: feat/cozy-01
+      ref: values
+  destination:
+    name: workflows-lab
+    namespace: airflow
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - SkipHooks=true
+      - Replace=true
+    retry:
+      limit: 30
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

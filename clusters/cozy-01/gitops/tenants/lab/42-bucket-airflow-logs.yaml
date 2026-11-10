@@ -1,0 +1,12 @@
+# Remote task logs of Airflow. Credentials: Secret tenant-lab/bucket-airflow-logs-airflow, copied
+# into OpenBAO (secret/airflow/logs) by scripts/cozystack-openbao.sh.
+apiVersion: apps.cozystack.io/v1alpha1
+kind: Bucket
+metadata:
+  name: airflow-logs
+  namespace: tenant-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  users:
+    airflow: {}

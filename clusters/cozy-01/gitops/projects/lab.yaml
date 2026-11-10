@@ -9,6 +9,8 @@ spec:
     - "https://github.com/BordetNicolas/TalosGitOps.git"
     - "https://argoproj.github.io/argo-helm"
     - "https://github.com/BordetNicolas/WorkflowsArgo.git"
+    - "https://charts.external-secrets.io"
+    - "https://airflow.apache.org"
   destinations:
     - name: workflows-lab
       namespace: "*"

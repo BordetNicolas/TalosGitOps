@@ -1,3 +1,5 @@
+# Static seal = auto-unseal after a restart (key in Secret tenant-lab/openbao-unseal, created by
+# scripts/cozystack-openbao.sh, never committed). The pods wait for that Secret to exist.
 apiVersion: apps.cozystack.io/v1alpha1
 kind: OpenBAO
 metadata:
@@ -12,3 +14,7 @@ spec:
   storageClass: local
   external: false
   ui: true
+  seal:
+    type: static
+    secretName: openbao-unseal
+    keyId: key-1

@@ -1,0 +1,229 @@
+# Apache Airflow Helm chart 1.21 on the tenant Kubernetes cluster "workflows" (tenant lab).
+# Ported from talos-02 (homelab-apps): same chart, Airflow 3.2.1, KubernetesExecutor.
+# Differences: PostgreSQL = Cozystack Postgres app, logs = Cozystack Bucket (remote logging),
+# DAGs/custom code = git-sync without shared PVC, secrets = OpenBAO via External Secrets.
+# https://airflow.apache.org/docs/helm-chart/stable/
+
+airflowVersion: "3.2.1"
+defaultAirflowTag: "3.2.1"
+
+executor: KubernetesExecutor
+
+allowPodLaunching: true
+
+# Secret airflow-credentials is synced from OpenBAO (secret/airflow/app) by an ExternalSecret.
+fernetKeySecretName: airflow-credentials
+apiSecretKeySecretName: airflow-credentials
+jwtSecretName: airflow-credentials
+
+data:
+  metadataSecretName: airflow-credentials
+
+# Secret airflow-s3-logs (OpenBAO secret/airflow/logs): remote logging settings and the
+# S3 connection to the Cozystack Bucket airflow-logs, as environment variables.
+extraEnvFrom: |
+  - secretRef:
+      name: airflow-s3-logs
+
+redis:
+  enabled: false
+
+# Cozystack Postgres app "airflow" (tenants/lab/41-postgres-airflow.yaml).
+postgresql:
+  enabled: false
+
+config:
+  core:
+    load_examples: "False"
+  api:
+    base_url: https://airflow.lab.cozy-01.alexetnico.com
+
+# Operators shared with talos-02: https://github.com/BordetNicolas/AirflowCustom (operators/).
+# No RWX volume on this cluster: cloned once at pod start by a git-sync init container into an
+# emptyDir (restart a pod to pick up changes).
+x-custom-code-volume: &customCodeVolume
+  name: custom-code
+  emptyDir: {}
+
+x-custom-code-mount: &customCodeMount
+  name: custom-code
+  mountPath: /opt/airflow/custom_code
+  readOnly: true
+
+x-custom-code-env: &customCodeEnv
+  name: PYTHONPATH
+  value: "/opt/airflow/custom_code/repo"
+
+x-custom-code-init: &customCodeInit
+  name: git-sync-custom-code
+  image: registry.k8s.io/git-sync/git-sync:v4.4.2
+  imagePullPolicy: IfNotPresent
+  securityContext:
+    runAsUser: 65533
+  env:
+    - name: GITSYNC_REPO
+      value: https://github.com/BordetNicolas/AirflowCustom.git
+    - name: GITSYNC_REF
+      value: main
+    - name: GITSYNC_DEPTH
+      value: "1"
+    - name: GITSYNC_ROOT
+      value: /git
+    - name: GITSYNC_LINK
+      value: repo
+    - name: GITSYNC_ADD_USER
+      value: "true"
+    - name: GITSYNC_ONE_TIME
+      value: "true"
+  volumeMounts:
+    - name: custom-code
+      mountPath: /git
+
+# Airflow 3.x + KubernetesExecutor: empty hostname on retries (apache/airflow#65366).
+airflowLocalSettings: |
+  from pathlib import Path
+
+  from airflow.utils.log.file_task_handler import FileTaskHandler
+
+  _orig_read_from_logs_server = FileTaskHandler._read_from_logs_server
+
+  def _read_from_logs_server_local_fallback(self, ti, worker_log_rel_path):
+      hostname = getattr(ti, "hostname", None) or ""
+      if getattr(ti, "triggerer_job", None):
+          hostname = getattr(ti.triggerer_job, "hostname", None) or hostname
+      if not str(hostname).strip():
+          return self._read_from_local(Path(self.local_base, worker_log_rel_path))
+      return _orig_read_from_logs_server(self, ti, worker_log_rel_path)
+
+  FileTaskHandler._read_from_logs_server = _read_from_logs_server_local_fallback
+
+apiServer:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+# Jobs are plain ArgoCD resources (no Helm hooks). No TTL, otherwise the deleted Job shows as
+# Missing and selfHeal recreates it in a loop. Force+Replace: spec.template is immutable.
+createUserJob:
+  useHelmHooks: false
+  applyCustomEnv: false
+  ttlSecondsAfterFinished: ~
+  jobAnnotations:
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
+  env:
+    - name: AIRFLOW_ADMIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: airflow-credentials
+          key: admin-password
+  args:
+    - bash
+    - -c
+    - |
+      set -euo pipefail
+      if airflow users list 2>/dev/null | grep -qw admin; then
+        airflow users reset-password -u admin -p "${AIRFLOW_ADMIN_PASSWORD}"
+      else
+        airflow users create \
+          -r Admin -u admin -e admin@alexetnico.com \
+          -f admin -l user -p "${AIRFLOW_ADMIN_PASSWORD}"
+      fi
+migrateDatabaseJob:
+  useHelmHooks: false
+  applyCustomEnv: false
+  ttlSecondsAfterFinished: ~
+  jobAnnotations:
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
+
+workers:
+  celery:
+    enableDefault: false
+  kubernetes:
+    serviceAccount:
+      create: true
+    extraVolumes:
+      - *customCodeVolume
+    extraVolumeMounts:
+      - *customCodeMount
+    extraInitContainers:
+      - *customCodeInit
+    env:
+      - *customCodeEnv
+
+scheduler:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  extraVolumes:
+    - *customCodeVolume
+  extraVolumeMounts:
+    - *customCodeMount
+  extraInitContainers:
+    - *customCodeInit
+  env:
+    - *customCodeEnv
+
+dagProcessor:
+  extraVolumes:
+    - *customCodeVolume
+  extraVolumeMounts:
+    - *customCodeMount
+  extraInitContainers:
+    - *customCodeInit
+  env:
+    - *customCodeEnv
+
+triggerer:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  extraVolumes:
+    - *customCodeVolume
+  extraVolumeMounts:
+    - *customCodeMount
+  extraInitContainers:
+    - *customCodeInit
+  env:
+    - *customCodeEnv
+
+dags:
+  persistence:
+    enabled: false
+  gitSync:
+    enabled: true
+    repo: https://github.com/BordetNicolas/DAGs.git
+    branch: main
+    ref: main
+    subPath: dags
+    depth: 1
+    period: 30s
+    maxFailures: 5
+
+# Task logs go to the Cozystack Bucket (remote logging); no shared volume needed.
+logs:
+  persistence:
+    enabled: false
+
+# Exposed through the Cozystack tenant ingress (Kubernetes addons.ingressNginx, Proxied).
+ingress:
+  web:
+    enabled: false
+  apiServer:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - name: airflow.lab.cozy-01.alexetnico.com
+
+cleanup:
+  enabled: true

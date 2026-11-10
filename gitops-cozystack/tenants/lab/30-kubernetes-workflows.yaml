@@ -19,3 +19,4 @@ spec:
       exposeMethod: Proxied
       hosts:
         - argo-workflows.lab.cozy-01.alexetnico.com
+        - airflow.lab.cozy-01.alexetnico.com

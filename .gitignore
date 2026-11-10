@@ -52,3 +52,6 @@ clusters/*/talos/
 # OpenTofu UniFi (state dans MinIO)
 tofu/unifi/.terraform/
 tofu/unifi/.terraform.lock.hcl
+
+# OpenBAO init output (root token, recovery key)
+clusters/*/openbao-init.json
