@@ -200,6 +200,10 @@ spec:
               memory: 512Mi
         controller:
           type: daemonset
+          podLabels:
+            # tenant-root egress is deny-by-default: this label opts the pods into the
+            # Cozystack allow-to-apiserver policy (pod discovery + log tailing need the API).
+            policy.cozystack.io/allow-to-apiserver: "true"
         service:
           enabled: true
           type: ClusterIP
