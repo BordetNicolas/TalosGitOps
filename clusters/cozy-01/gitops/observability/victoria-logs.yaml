@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: victoria-logs
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+spec:
+  project: platform
+  source:
+    repoURL: https://victoriametrics.github.io/helm-charts
+    chart: victoria-logs-single
+    targetRevision: 0.7.6
+    helm:
+      releaseName: victoria-logs
+      values: |
+        server:
+          persistentVolume:
+            enabled: true
+            storageClass: linstor-lvm-r1
+            size: 50Gi
+          retentionPeriod: "30d"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          extraArgs:
+            envflag.enable: "true"
+            envflag.prefix: VM_
+            loggerFormat: json
+          service:
+            type: ClusterIP
+            port: 9428
+        serviceMonitor:
+          enabled: true
+          extraLabels:
+            prometheus: victoriametrics
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tenant-root
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true

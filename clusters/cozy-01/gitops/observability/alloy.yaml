@@ -1,0 +1,215 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+spec:
+  project: platform
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: alloy
+    targetRevision: 1.8.1
+    helm:
+      releaseName: alloy
+      values: |
+        alloy:
+          clustering:
+            enabled: true
+          configMap:
+            content: |
+              // ========================================
+              // Discovery des pods Kubernetes
+              // ========================================
+              discovery.kubernetes "pods" {
+                role = "pod"
+              }
+
+              discovery.relabel "pods" {
+                targets = discovery.kubernetes.pods.targets
+
+                // Labels de base
+                rule {
+                  source_labels = ["__meta_kubernetes_namespace"]
+                  target_label  = "namespace"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_name"]
+                  target_label  = "pod"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_container_name"]
+                  target_label  = "container"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_node_name"]
+                  target_label  = "node"
+                }
+                // Label tenant pour isolation
+                rule {
+                  source_labels = ["__meta_kubernetes_namespace"]
+                  regex         = "tenant-(.*)"
+                  replacement   = "$1"
+                  target_label  = "tenant"
+                }
+              }
+
+              // ========================================
+              // LOGS → VictoriaLogs
+              // ========================================
+              loki.source.kubernetes "pods" {
+                targets    = discovery.relabel.pods.output
+                forward_to = [loki.process.pods.receiver]
+
+                clustering {
+                  enabled = true
+                }
+              }
+
+              loki.process "pods" {
+                // Extraction des IDs de trace/span depuis JSON
+                stage.json {
+                  expressions = {
+                    trace_id = "traceid",
+                    span_id  = "spanid",
+                    level    = "level",
+                  }
+                }
+
+                // Extraction du niveau de log depuis les logs texte
+                stage.regex {
+                  expression = "(?i)level=(?P<level_extracted>\\w+)"
+                }
+
+                stage.labels {
+                  values = {
+                    level = "",
+                  }
+                }
+
+                forward_to = [loki.write.victorialogs.receiver]
+              }
+
+              loki.write "victorialogs" {
+                endpoint {
+                  url = "http://victoria-logs-single-server.tenant-root.svc.cluster.local:9428/insert/loki/api/v1/push"
+                }
+              }
+
+              // ========================================
+              // TRACES → Tempo
+              // ========================================
+              otelcol.receiver.otlp "default" {
+                grpc {
+                  endpoint = "0.0.0.0:4317"
+                }
+                http {
+                  endpoint = "0.0.0.0:4318"
+                }
+
+                output {
+                  traces  = [otelcol.processor.batch.default.input]
+                  metrics = [otelcol.processor.batch.default.input]
+                }
+              }
+
+              otelcol.processor.batch "default" {
+                output {
+                  traces  = [otelcol.exporter.otlp.tempo.input]
+                  metrics = [otelcol.exporter.prometheus.victoriametrics.input]
+                }
+              }
+
+              otelcol.exporter.otlp "tempo" {
+                client {
+                  endpoint = "tempo.tenant-root.svc.cluster.local:4317"
+                  tls {
+                    insecure             = true
+                    insecure_skip_verify = true
+                  }
+                }
+              }
+
+              // ========================================
+              // METRIQUES OTEL → VictoriaMetrics
+              // ========================================
+              otelcol.exporter.prometheus "victoriametrics" {
+                forward_to = [prometheus.remote_write.victoriametrics.receiver]
+              }
+
+              prometheus.remote_write "victoriametrics" {
+                endpoint {
+                  url = "http://vmsingle-vm.tenant-root.svc.cluster.local:8429/api/v1/write"
+                }
+              }
+
+              // ========================================
+              // Discovery des services avec /metrics
+              // ========================================
+              discovery.kubernetes "services" {
+                role = "service"
+              }
+
+              discovery.relabel "metrics_services" {
+                targets = discovery.kubernetes.services.targets
+
+                // Ne garder que les services annotés
+                rule {
+                  source_labels = ["__meta_kubernetes_service_annotation_prometheus_io_scrape"]
+                  regex         = "true"
+                  action        = "keep"
+                }
+
+                // Port depuis annotation ou défaut
+                rule {
+                  source_labels = ["__meta_kubernetes_service_annotation_prometheus_io_port"]
+                  regex         = "(.+)"
+                  target_label  = "__meta_kubernetes_service_port"
+                  replacement   = "$1"
+                }
+
+                // Path depuis annotation ou défaut /metrics
+                rule {
+                  source_labels = ["__meta_kubernetes_service_annotation_prometheus_io_path"]
+                  regex         = "(.+)"
+                  target_label  = "__metrics_path__"
+                  replacement   = "$1"
+                }
+
+                rule {
+                  source_labels = ["__meta_kubernetes_namespace"]
+                  target_label  = "namespace"
+                }
+
+                rule {
+                  source_labels = ["__meta_kubernetes_service_name"]
+                  target_label  = "service"
+                }
+              }
+
+              prometheus.scrape "metrics_services" {
+                targets    = discovery.relabel.metrics_services.output
+                forward_to = [prometheus.remote_write.victoriametrics.receiver]
+              }
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+        controller:
+          type: daemonset
+        service:
+          enabled: true
+          type: ClusterIP
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tenant-root
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
