@@ -13,7 +13,7 @@ data:
         type: victorialogs-datasource
         uid: victorialogs
         access: proxy
-        url: http://victoria-logs-single-server.tenant-root.svc.cluster.local:9428
+        url: http://victoria-logs-single-server.tenant-root.svc:9428
         isDefault: false
         jsonData:
           maxLines: 5000
@@ -24,7 +24,7 @@ data:
         type: tempo
         uid: tempo
         access: proxy
-        url: http://tempo.tenant-root.svc.cluster.local:3200
+        url: http://tempo.tenant-root.svc:3200
         isDefault: false
         jsonData:
           httpMethod: GET
@@ -42,7 +42,7 @@ data:
         type: prometheus
         uid: vm
         access: proxy
-        url: http://vmsingle-vm.tenant-root.svc.cluster.local:8429
+        url: http://vmselect-shortterm.tenant-root.svc:8481/select/0/prometheus
         isDefault: true
         jsonData:
           timeInterval: 30s

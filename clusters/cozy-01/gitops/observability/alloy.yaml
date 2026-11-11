@@ -93,7 +93,7 @@ spec:
 
               loki.write "victorialogs" {
                 endpoint {
-                  url = "http://victoria-logs-single-server.tenant-root.svc.cluster.local:9428/insert/loki/api/v1/push"
+                  url = "http://victoria-logs-single-server.tenant-root.svc:9428/insert/loki/api/v1/push"
                 }
               }
 
@@ -123,7 +123,7 @@ spec:
 
               otelcol.exporter.otlp "tempo" {
                 client {
-                  endpoint = "tempo.tenant-root.svc.cluster.local:4317"
+                  endpoint = "tempo.tenant-root.svc:4317"
                   tls {
                     insecure             = true
                     insecure_skip_verify = true
@@ -140,7 +140,7 @@ spec:
 
               prometheus.remote_write "victoriametrics" {
                 endpoint {
-                  url = "http://vmsingle-vm.tenant-root.svc.cluster.local:8429/api/v1/write"
+                  url = "http://vminsert-shortterm.tenant-root.svc:8480/insert/0/prometheus/api/v1/write"
                 }
               }
 

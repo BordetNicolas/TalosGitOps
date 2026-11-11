@@ -73,12 +73,12 @@ kubectl logs -n tenant-root -l app.kubernetes.io/name=tempo --tail=100
 
 # Tester l'ingestion
 # Logs
-curl -X POST http://victoria-logs-single-server.tenant-root.svc.cluster.local:9428/insert/loki/api/v1/push \
+curl -X POST http://victoria-logs-single-server.tenant-root.svc:9428/insert/loki/api/v1/push \
   -H "Content-Type: application/json" \
   -d '{"streams":[{"stream":{"test":"true"},"values":[["'$(date +%s%N)'","test"]]}]}'
 
 # Traces (via Alloy)
-# Envoyer une trace OTLP vers alloy.tenant-root.svc.cluster.local:4317
+# Envoyer une trace OTLP vers alloy.tenant-root.svc:4317
 
 # Métriques (via Alloy)
 # Annoter un service avec prometheus.io/scrape: "true"
