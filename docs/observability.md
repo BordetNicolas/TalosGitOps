@@ -16,6 +16,43 @@ via l'Application `observability-stack`. Après modification : `make CLUSTER=coz
 Tempo : stockage `local` 10 Gi, rétention 7 j. Ses span metrics sont écrites dans
 `vminsert-shortterm` (`/insert/0/prometheus/api/v1/write`).
 
+## Monitoring de l'hôte Proxmox (pve1)
+
+Déployé avec `observability-stack` (namespace `tenant-root`) : `gitops-cozystack/observability/`.
+
+| Fichier | Rôle |
+|---|---|
+| `pve-exporter.yaml` | Deployment + Service `pve-exporter` (API Proxmox : storages, VMs, nœud) et `VMScrapeConfig` `pve` (multi-target, `/pve?target=<hôte>`) |
+| `pve-node-exporter.yaml` | `VMScrapeConfig` `pve-node-exporter` : `<hôte>:9100` (node_exporter installé sur l'hôte : disques, I/O, CPU, RAM, températures) |
+| `grafana-dashboards.yaml` | `GrafanaDashboard` 1860 (Node Exporter Full) et 10347 (Proxmox via Prometheus), dossier « Proxmox », datasource `vm-shortterm` |
+
+L'hôte est déduit de `PROXMOX_VE_ENDPOINT` au rendu (`make CLUSTER=cozy-01 gitops-render`).
+
+Prérequis hors cluster :
+
+```bash
+# sur pve1 : node_exporter
+apt update && apt install -y prometheus-node-exporter
+
+# sur pve1 : utilisateur + token en lecture seule pour pve-exporter
+pveum user add prometheus@pve
+pveum aclmod / -user prometheus@pve -role PVEAuditor
+pveum user token add prometheus@pve exporter --privsep 0   # affiche la valeur du token une seule fois
+```
+
+Puis dans `clusters/cozy-01/cluster.env` (gitignoré) :
+
+```bash
+PVE_EXPORTER_USER=prometheus@pve
+PVE_EXPORTER_TOKEN_NAME=exporter
+PVE_EXPORTER_TOKEN_VALUE=<valeur du token>
+```
+
+et `make CLUSTER=cozy-01 cozystack-secrets` (crée le Secret `tenant-root/pve-exporter`).
+Sans ce Secret, le pod reste en `CreateContainerConfigError`.
+
+Le réseau doit laisser passer les nœuds (`192.168.20.0/24`) vers pve1 sur les ports 9100 et 8006.
+
 ## Instrumenter une application
 
 - **Logs** : écrire sur stdout. Si c'est du JSON, les champs sont fusionnés (`Merge_Log`) et

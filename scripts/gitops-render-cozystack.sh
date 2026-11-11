@@ -14,7 +14,8 @@ ensure_env \
   ARGOCD_GIT_REVISION \
   COZYSTACK_VERSION \
   COZY_ROOT_HOST \
-  COZY_EXTERNAL_IP_RANGE
+  COZY_EXTERNAL_IP_RANGE \
+  PROXMOX_VE_ENDPOINT
 
 [[ "${COZY_EXTERNAL_IP_RANGE}" =~ ^[0-9.]+-[0-9.]+$ ]] ||
   die "COZY_EXTERNAL_IP_RANGE must look like 192.168.20.60-192.168.20.79 (got: ${COZY_EXTERNAL_IP_RANGE})"
@@ -25,6 +26,11 @@ ARGOCD_INGRESS_HOST="${ARGOCD_INGRESS_HOST:-argocd.${COZY_ROOT_HOST}}"
 log "cozystack ${COZYSTACK_VERSION}, root host ${COZY_ROOT_HOST}, argocd ${ARGOCD_INGRESS_HOST}"
 log "git source: ${ARGOCD_GIT_REPO}@${ARGOCD_GIT_REVISION}"
 log "metallb pool: ${COZY_EXTERNAL_IP_RANGE}"
+
+# Proxmox host (pve-exporter target + node_exporter scrape) = host of PROXMOX_VE_ENDPOINT.
+PVE_HOST="${PROXMOX_VE_ENDPOINT#*://}"
+PVE_HOST="${PVE_HOST%%[:/]*}"
+log "proxmox host monitored: ${PVE_HOST}"
 
 SRC="${GITOPS_TEMPLATES_DIR}"
 DST="${GITOPS_DIR}"
@@ -39,6 +45,7 @@ substitute() {
     -e "s|__COZYSTACK_VERSION__|${COZYSTACK_VERSION}|g" \
     -e "s|__COZY_ROOT_HOST__|${COZY_ROOT_HOST}|g" \
     -e "s|__COZY_EXTERNAL_IP_RANGE__|${COZY_EXTERNAL_IP_RANGE}|g" \
+    -e "s|__PVE_HOST__|${PVE_HOST}|g" \
     -e "s|__CLUSTER__|${CLUSTER}|g" \
     -e "s|path: gitops/|path: clusters/${CLUSTER}/gitops/|g" \
     "$src" > "$dst"

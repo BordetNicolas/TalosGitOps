@@ -40,7 +40,7 @@
 #   clean            remove local generated files for this cluster
 #   unifi-plan|unifi-apply|unifi-destroy   VLAN + DNS on UniFi (cozystack flavor)
 #   cozystack-bootstrap  install cozy-installer + Platform Package (before ArgoCD)
-#   cozystack-secrets    Cloudflare token for DNS-01 certificates
+#   cozystack-secrets    Cloudflare token (DNS-01 certificates) + Proxmox token (pve-exporter)
 #   cozystack-storage    LINSTOR ZFS pools on the workers
 #   cozystack-openbao  init/configure the tenant OpenBAO and store the Airflow secrets in it
 #   cozystack-workflows-secrets  S3 artifact repository (Bucket) of the tenant cluster "workflows"
@@ -213,7 +213,7 @@ unifi-destroy: unifi-init ## Remove the cluster VLAN and DNS records from UniFi.
 cozystack-bootstrap: check-cluster ## Install cozy-installer + Platform Package (CNI), wait for nodes Ready.
 	$(ROOT_DIR)/scripts/bootstrap-cozystack.sh
 
-cozystack-secrets: check-cluster ## Apply the Cloudflare token Secret used for DNS-01 certificates.
+cozystack-secrets: check-cluster ## Apply runtime Secrets: Cloudflare token (DNS-01) and Proxmox token (pve-exporter).
 	$(ROOT_DIR)/scripts/apply-cozystack-secrets.sh
 
 cozystack-storage: check-cluster ## Create the LINSTOR ZFS storage pools on the workers.

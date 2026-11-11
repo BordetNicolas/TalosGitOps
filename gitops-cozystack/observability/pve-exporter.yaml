@@ -1,0 +1,102 @@
+# prometheus-pve-exporter: queries the Proxmox VE API (read-only token, role PVEAuditor) and exposes
+# guests / storages / node usage. Credentials: Secret pve-exporter, applied at runtime by
+# scripts/apply-cozystack-secrets.sh (make cozystack-secrets) from cluster.env.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pve-exporter
+  namespace: tenant-root
+  labels:
+    app.kubernetes.io/name: pve-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pve-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pve-exporter
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: pve-exporter
+          image: prompve/prometheus-pve-exporter:3.11.0
+          args:
+            - --web.listen-address=:9221
+            # one API call per guest: not needed for the dashboard
+            - --no-collector.config
+          env:
+            # Proxmox uses a self-signed certificate by default.
+            - name: PVE_VERIFY_SSL
+              value: "false"
+          envFrom:
+            - secretRef:
+                name: pve-exporter
+          ports:
+            - name: http
+              containerPort: 9221
+          readinessProbe:
+            tcpSocket:
+              port: http
+          livenessProbe:
+            tcpSocket:
+              port: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pve-exporter
+  namespace: tenant-root
+  labels:
+    app.kubernetes.io/name: pve-exporter
+spec:
+  selector:
+    app.kubernetes.io/name: pve-exporter
+  ports:
+    - name: http
+      port: 9221
+      targetPort: http
+---
+# Multi-target pattern: VMAgent asks the exporter to query the Proxmox host (target param).
+# VMAgent (cozy-monitoring) selects every VMScrapeConfig of the cluster.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMScrapeConfig
+metadata:
+  name: pve
+  namespace: tenant-root
+spec:
+  path: /pve
+  scrapeInterval: 60s
+  scrapeTimeout: 30s
+  params:
+    module: [default]
+    cluster: ["1"]
+    node: ["1"]
+  staticConfigs:
+    - targets:
+        - __PVE_HOST__
+  relabelConfigs:
+    - sourceLabels: [__address__]
+      targetLabel: __param_target
+    - sourceLabels: [__param_target]
+      targetLabel: instance
+    - targetLabel: __address__
+      replacement: pve-exporter.tenant-root.svc:9221
+    - targetLabel: job
+      replacement: pve

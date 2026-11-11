@@ -1,0 +1,17 @@
+# node_exporter running on the Proxmox host itself (apt install prometheus-node-exporter, port 9100):
+# real filesystems, disk I/O, CPU, memory, network, temperatures of the physical machine.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMScrapeConfig
+metadata:
+  name: pve-node-exporter
+  namespace: tenant-root
+spec:
+  scrapeInterval: 30s
+  staticConfigs:
+    - targets:
+        - 192.168.2.33:9100
+      labels:
+        host: pve
+  relabelConfigs:
+    - targetLabel: job
+      replacement: pve-node-exporter

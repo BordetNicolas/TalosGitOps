@@ -1,0 +1,37 @@
+# Proxmox host dashboards, downloaded from grafana.com by the Grafana operator.
+# Both use the ${DS_PROMETHEUS} input, mapped to the Cozystack datasource vm-shortterm.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: proxmox-node-exporter-full
+  namespace: tenant-root
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  resyncPeriod: 24h
+  folder: Proxmox
+  grafanaCom:
+    id: 1860
+    revision: 46
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: vm-shortterm
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: proxmox-via-prometheus
+  namespace: tenant-root
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  resyncPeriod: 24h
+  folder: Proxmox
+  grafanaCom:
+    id: 10347
+    revision: 5
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: vm-shortterm
