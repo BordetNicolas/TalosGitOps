@@ -1,95 +1,40 @@
-# Observability Stack pour CozyStack
+# Observabilité (Cozystack)
 
-Stack d'observabilité native CozyStack avec VictoriaMetrics, VictoriaLogs, Tempo et Alloy.
+Cozystack fournit déjà l'essentiel dans le tenant `root` (chart `monitoring`) :
 
-## Structure
+| Besoin | Fourni par Cozystack |
+|---|---|
+| Collecte des logs de **tous** les namespaces | fluent-bit (`cozy-monitoring`) → `vlinsert-generic.tenant-root.svc:9481` |
+| Stockage / lecture des logs | VictoriaLogs `generic` (`vlselect-generic.tenant-root.svc:9471`) |
+| Métriques | VictoriaMetrics `shortterm` / `longterm` (`vminsert-*:8480`, `vmselect-*:8481`) |
+| Dashboards | Grafana (datasources `vlogs-generic`, `vm-shortterm`, `vm-longterm`) |
+
+Ce dossier n'ajoute que ce qui manque : le **tracing**.
 
 ```
 observability/
-├── README.md                      # Ce fichier
-├── victoria-logs.yaml            # Logs centralisés (compatible Loki)
-├── tempo.yaml                    # Traces distribuées (OpenTelemetry)
-├── alloy.yaml                    # Collecteur unifié (logs + traces + métriques OTEL)
-└── grafana-datasources.yaml      # Datasources additionnelles pour Grafana
+├── tempo.yaml                 # Application ArgoCD : Tempo (traces), stockage local 10Gi, rétention 7j
+└── grafana-datasources.yaml   # GrafanaDatasource "tempo" (grafana-operator)
 ```
 
-## Installation
+Déployé par l'Application `observability-stack` (`apps/30-observability-stack.yaml`).
 
-Cette stack est déployée automatiquement via l'application ArgoCD `observability-stack` (voir `apps/30-observability-stack.yaml`).
+## Envoyer des traces
 
-```bash
-# Vérifier le déploiement
-kubectl get applications -n argocd observability-stack
-kubectl get pods -n tenant-root | grep -E 'victoria-logs|tempo|alloy'
+Les applications exportent en OTLP directement vers Tempo :
 
-# Tester la stack
-./scripts/test-observability.sh
-```
+- gRPC : `tempo.tenant-root.svc:4317`
+- HTTP : `http://tempo.tenant-root.svc:4318`
 
-## Composants
+Les métriques dérivées des traces (span metrics) sont écrites par Tempo dans
+`vminsert-shortterm` (`/insert/0/prometheus/api/v1/write`).
 
-| Composant | Version | Stockage | Rétention |
-|---|---|---|---|
-| VictoriaLogs | 0.7.6 | LINSTOR 50Gi | 30 jours |
-| Tempo | 1.24.4 | LINSTOR 20Gi | 7 jours |
-| Alloy | 1.8.1 | - | - |
+## Notes
 
-## Configuration Alloy
-
-Alloy collecte :
-
-1. **Logs** : Tous les pods via `loki.source.kubernetes`, envoyés vers VictoriaLogs
-2. **Traces** : OTLP (gRPC:4317, HTTP:4318), envoyées vers Tempo
-3. **Métriques OTEL** : Converties en Prometheus et envoyées vers VictoriaMetrics
-4. **Métriques Prometheus** : Scraping des services annotés `prometheus.io/scrape: "true"`
-
-## Intégration Grafana
-
-Le Grafana de CozyStack doit charger les datasources depuis `grafana-datasources.yaml`.
-
-**Configuration manuelle** (si les ConfigMaps ne sont pas auto-chargées) :
-
-```bash
-kubectl port-forward -n tenant-root svc/grafana 3000:80
-
-# Accéder à http://localhost:3000
-# Configuration > Data sources > Add data source
-# Ajouter VictoriaLogs (type: Loki) et Tempo selon grafana-datasources.yaml
-```
-
-## Utilisation
-
-Voir la documentation complète : `docs/observability-cozystack.md`
-
-Exemples d'applications instrumentées : `examples/observability/`
-
-## Troubleshooting
-
-```bash
-# Logs des composants
-kubectl logs -n tenant-root -l app.kubernetes.io/name=alloy --tail=100
-kubectl logs -n tenant-root -l app.kubernetes.io/name=victoria-logs-single --tail=100
-kubectl logs -n tenant-root -l app.kubernetes.io/name=tempo --tail=100
-
-# Tester l'ingestion
-# Logs
-curl -X POST http://victoria-logs-single-server.tenant-root.svc:9428/insert/loki/api/v1/push \
-  -H "Content-Type: application/json" \
-  -d '{"streams":[{"stream":{"test":"true"},"values":[["'$(date +%s%N)'","test"]]}]}'
-
-# Traces (via Alloy)
-# Envoyer une trace OTLP vers alloy.tenant-root.svc:4317
-
-# Métriques (via Alloy)
-# Annoter un service avec prometheus.io/scrape: "true"
-```
-
-## Évolution
-
-Pour passer en mode distribué (haute disponibilité) :
-
-1. VictoriaMetrics : remplacer `vmsingle` par `vmcluster`
-2. VictoriaLogs : cluster mode (quand disponible dans la chart)
-3. Tempo : passer de `tempo` à `tempo-distributed`
-
-Voir `docs/observability-cozystack.md` pour les détails.
+- Le domaine DNS du cluster est `cozy.local` : utiliser `<svc>.<ns>.svc` (jamais `.svc.cluster.local`).
+- `tenant-root` est en egress deny-by-default : un pod qui doit parler à l'API server
+  doit porter le label `policy.cozystack.io/allow-to-apiserver: "true"`.
+- `tempo.yaml` porte `compare-options: ServerSideDiff=true` : sans lui, un StatefulSet avec
+  `volumeClaimTemplates` reste `OutOfSync` (ArgoCD ajoute `creationTimestamp: null`).
+- Changer la StorageClass ou la taille du volume impose de supprimer le StatefulSet et son PVC
+  (`volumeClaimTemplates` est immuable).

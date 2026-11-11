@@ -1,60 +1,19 @@
-apiVersion: v1
-kind: ConfigMap
+# Tempo is the only datasource Cozystack does not provide: logs (vlogs-generic) and
+# metrics (vm-shortterm, vm-longterm) already exist as GrafanaDatasource in tenant-root.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
 metadata:
-  name: grafana-extra-datasources
+  name: tempo
   namespace: tenant-root
-  labels:
-    grafana_datasource: "1"
-data:
-  victorialogs.yaml: |
-    apiVersion: 1
-    datasources:
-      - name: VictoriaLogs
-        type: victorialogs-datasource
-        uid: victorialogs
-        access: proxy
-        url: http://victoria-logs-single-server.tenant-root.svc:9428
-        isDefault: false
-        jsonData:
-          maxLines: 5000
-          timeInterval: 30s
-        editable: false
-
-      - name: Tempo
-        type: tempo
-        uid: tempo
-        access: proxy
-        url: http://tempo.tenant-root.svc:3200
-        isDefault: false
-        jsonData:
-          httpMethod: GET
-          tracesToLogs:
-            datasourceUid: victorialogs
-            filterByTraceID: true
-            filterBySpanID: false
-          tracesToMetrics:
-            datasourceUid: vm
-          serviceMap:
-            datasourceUid: vm
-        editable: false
-
-      - name: VictoriaMetrics
-        type: prometheus
-        uid: vm
-        access: proxy
-        url: http://vmselect-shortterm.tenant-root.svc:8481/select/0/prometheus
-        isDefault: true
-        jsonData:
-          timeInterval: 30s
-          httpMethod: POST
-        editable: false
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-extra-plugins
-  namespace: tenant-root
-data:
-  plugins: |
-    victoriametrics-datasource
-    victorialogs-datasource
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  resyncPeriod: 5m
+  datasource:
+    name: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo.tenant-root.svc:3200
+    jsonData:
+      httpMethod: GET
