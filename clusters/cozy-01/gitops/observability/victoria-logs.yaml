@@ -5,6 +5,9 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "6"
+    # With ServerSideApply, the default diff predicts creationTimestamp: null in the StatefulSet
+    # volumeClaimTemplates and never converges: let the API server compute the diff.
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: platform
   source:
@@ -17,8 +20,8 @@ spec:
         server:
           persistentVolume:
             enabled: true
-            storageClassName: replicated
-            size: 50Gi
+            storageClassName: local
+            size: 20Gi
           retentionPeriod: "30d"
           resources:
             requests:
