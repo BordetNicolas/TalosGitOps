@@ -18,6 +18,11 @@ spec:
           cm:
             # Must match the browser URL (ingress host) or login redirects loop.
             url: https://__ARGOCD_INGRESS_HOST__
+            # Server-side diff predicts creationTimestamp: null in volumeClaimTemplates while
+            # the live object has none: every StatefulSet with a PVC template stays OutOfSync.
+            resource.customizations.ignoreDifferences.apps_StatefulSet: |
+              jqPathExpressions:
+                - '.spec.volumeClaimTemplates[]?.metadata.creationTimestamp'
           repositories:
             # OCI Helm registry of the Cozystack operator chart (cozy-installer).
             cozystack-charts:
