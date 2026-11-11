@@ -1,0 +1,25 @@
+# Proxmox host monitoring: pve-exporter (API) + node_exporter scrape (host, installed outside the cluster).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: proxmox-monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "9"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/BordetNicolas/TalosGitOps.git
+    targetRevision: main
+    path: clusters/talos-02/gitops/proxmox-monitoring
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

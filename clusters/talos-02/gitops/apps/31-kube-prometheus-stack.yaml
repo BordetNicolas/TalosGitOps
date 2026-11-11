@@ -84,6 +84,29 @@ spec:
               memory: 256Mi
             limits:
               memory: 512Mi
+          # Proxmox host dashboards (downloaded from grafana.com at startup).
+          dashboardProviders:
+            dashboardproviders.yaml:
+              apiVersion: 1
+              providers:
+                - name: proxmox
+                  orgId: 1
+                  folder: Proxmox
+                  type: file
+                  disableDeletion: false
+                  editable: true
+                  options:
+                    path: /var/lib/grafana/dashboards/proxmox
+          dashboards:
+            proxmox:
+              node-exporter-full:
+                gnetId: 1860
+                revision: 46
+                datasource: Prometheus
+              proxmox-via-prometheus:
+                gnetId: 10347
+                revision: 5
+                datasource: Prometheus
           additionalDataSources:
             - name: Loki
               uid: loki

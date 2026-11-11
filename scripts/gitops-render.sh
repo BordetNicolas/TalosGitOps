@@ -22,7 +22,8 @@ ensure_env \
   ARGOCD_GIT_REVISION \
   APPS_GIT_REPO \
   APPS_GIT_REVISION \
-  METALLB_POOL_RANGE
+  METALLB_POOL_RANGE \
+  PROXMOX_VE_ENDPOINT
 
 # Alertmanager telegram_configs.chat_id must be an int in the config (no *_file variant):
 # an unrendered placeholder would make the whole Alertmanager config invalid.
@@ -46,6 +47,12 @@ log "longhorn backup target: ${LONGHORN_BACKUP_TARGET}"
 METALLB_VIP="${METALLB_POOL_RANGE%%-*}"
 export METALLB_VIP
 log "metallb ingress VIP: ${METALLB_VIP}"
+
+# Proxmox host (pve-exporter target + node_exporter scrape) = host of PROXMOX_VE_ENDPOINT.
+PVE_HOST="${PROXMOX_VE_ENDPOINT#*://}"
+PVE_HOST="${PVE_HOST%%[:/]*}"
+export PVE_HOST
+log "proxmox host monitored: ${PVE_HOST}"
 
 SRC="${GITOPS_TEMPLATES_DIR}"
 DST="${GITOPS_DIR}"
@@ -75,6 +82,7 @@ substitute() {
     -e "s|__UNIFI_HOST__|${UNIFI_HOST:-https://unifi.local}|g" \
     -e "s|__LONGHORN_BACKUP_TARGET__|${LONGHORN_BACKUP_TARGET}|g" \
     -e "s|__TELEGRAM_CHAT_ID__|${TELEGRAM_CHAT_ID}|g" \
+    -e "s|__PVE_HOST__|${PVE_HOST}|g" \
     -e "s|__CLUSTER__|${CLUSTER}|g" \
     -e "s|path: gitops/|path: clusters/${CLUSTER}/gitops/|g" \
     "$src" > "$dst"
@@ -110,6 +118,7 @@ render_dir external-dns
 render_dir doppler
 render_dir observability
 render_dir mcp
+render_dir proxmox-monitoring
 
 log "done — clusters/${CLUSTER}/gitops/ is ready."
 log "Doppler: set DOPPLER_PROJECT/CONFIG in cluster.env, then: make CLUSTER=${CLUSTER} apply-doppler-token"
