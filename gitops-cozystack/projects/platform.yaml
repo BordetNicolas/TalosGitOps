@@ -14,6 +14,8 @@ spec:
     - "__ARGOCD_GIT_REPO__"
     - "https://argoproj.github.io/argo-helm"
     - "ghcr.io/cozystack/cozystack"
+    - "https://grafana.github.io/helm-charts"
+    - "https://victoriametrics.github.io/helm-charts"
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc
