@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
 """
 Exemple d'application Python avec observabilité complète :
-- Métriques Prometheus
-- Logs structurés JSON
-- Traces OpenTelemetry
+- Métriques Prometheus (/metrics, scrapées par VictoriaMetrics via un VMServiceScrape)
+- Logs structurés JSON (collectés par le fluent-bit de Cozystack, corrélés par trace_id)
+- Traces OpenTelemetry (OTLP gRPC direct vers Tempo)
 """
 import json
 import logging
+import os
 import random
 import time
 from flask import Flask, request
 from prometheus_client import Counter, Histogram, generate_latest
-from opentelemetry import trace, metrics as otel_metrics
+from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 
 # ============================================================================
@@ -70,22 +68,12 @@ resource = Resource.create({
 
 trace_provider = TracerProvider(resource=resource)
 otlp_trace_exporter = OTLPSpanExporter(
-    endpoint="alloy.tenant-root.svc.cluster.local:4317",
+    endpoint=os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "tempo.tenant-root.svc:4317"),
     insecure=True
 )
 trace_provider.add_span_processor(BatchSpanProcessor(otlp_trace_exporter))
 trace.set_tracer_provider(trace_provider)
 tracer = trace.get_tracer(__name__)
-
-# OpenTelemetry Metrics
-otlp_metric_exporter = OTLPMetricExporter(
-    endpoint="alloy.tenant-root.svc.cluster.local:4317",
-    insecure=True
-)
-metric_reader = PeriodicExportingMetricReader(otlp_metric_exporter, export_interval_millis=15000)
-meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-otel_metrics.set_meter_provider(meter_provider)
-meter = otel_metrics.get_meter(__name__)
 
 # Métriques Prometheus (classiques)
 REQUEST_COUNT = Counter(
@@ -98,18 +86,6 @@ REQUEST_DURATION = Histogram(
     'http_request_duration_seconds',
     'HTTP request duration in seconds',
     ['method', 'endpoint']
-)
-
-# Métriques OpenTelemetry (envoyées via OTLP)
-otel_request_counter = meter.create_counter(
-    "app.requests.total",
-    description="Total number of requests"
-)
-
-otel_request_duration = meter.create_histogram(
-    "app.request.duration",
-    unit="ms",
-    description="Request duration in milliseconds"
 )
 
 # ============================================================================
@@ -140,7 +116,6 @@ def index():
         logger.info("Accessed root endpoint")
         
         REQUEST_COUNT.labels(method='GET', endpoint='/', status='200').inc()
-        otel_request_counter.add(1, {"endpoint": "/", "method": "GET"})
         
         return {
             'message': 'Python Demo App - Observability Example',
@@ -176,8 +151,6 @@ def users():
         
         REQUEST_COUNT.labels(method='GET', endpoint='/api/users', status='200').inc()
         REQUEST_DURATION.labels(method='GET', endpoint='/api/users').observe(duration)
-        otel_request_counter.add(1, {"endpoint": "/api/users", "method": "GET"})
-        otel_request_duration.record(duration * 1000, {"endpoint": "/api/users"})
         
         logger.info("Users fetched successfully", extra={
             'endpoint': '/api/users',

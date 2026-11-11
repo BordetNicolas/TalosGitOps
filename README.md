@@ -77,10 +77,9 @@ talos/
 > [Cozystack](https://cozystack.io) (`PLATFORM_FLAVOR=cozystack`, exemple `clusters/cozy-01`).
 > Voir [`docs/cozystack.md`](docs/cozystack.md).
 
-> **Observabilité** : Une stack d'observabilité complète (VictoriaMetrics, VictoriaLogs, Tempo, Alloy)
-> est disponible pour CozyStack avec support des métriques, logs et traces distribuées.
-> Voir [`docs/QUICKSTART-OBSERVABILITY.md`](docs/QUICKSTART-OBSERVABILITY.md) et
-> [`docs/observability-cozystack.md`](docs/observability-cozystack.md).
+> **Observabilité** : sur Cozystack, logs et métriques viennent de la stack de monitoring du
+> tenant `root` (VictoriaLogs, VictoriaMetrics, Grafana) ; ce dépôt y ajoute uniquement Tempo (traces).
+> Voir [`docs/observability.md`](docs/observability.md).
 
 ## Prerequisites
 

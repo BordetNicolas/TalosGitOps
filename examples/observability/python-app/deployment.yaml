@@ -24,6 +24,9 @@ spec:
         - name: app
           image: python-demo-app:latest
           imagePullPolicy: IfNotPresent
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: tempo.tenant-root.svc:4317
           ports:
             - name: http
               containerPort: 8080
@@ -52,10 +55,6 @@ kind: Service
 metadata:
   name: python-demo-app
   namespace: demo-app
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "8080"
-    prometheus.io/path: "/metrics"
   labels:
     app: python-demo-app
 spec:
@@ -67,6 +66,21 @@ spec:
       name: http
   selector:
     app: python-demo-app
+---
+# VMAgent (cozy-monitoring) selects every VMServiceScrape of the cluster.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: python-demo-app
+  namespace: demo-app
+spec:
+  selector:
+    matchLabels:
+      app: python-demo-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

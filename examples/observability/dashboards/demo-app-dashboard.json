@@ -1,7 +1,11 @@
 {
   "dashboard": {
     "title": "Demo App - Observability",
-    "tags": ["demo", "observability", "cozystack"],
+    "tags": [
+      "demo",
+      "observability",
+      "cozystack"
+    ],
     "timezone": "browser",
     "schemaVersion": 39,
     "refresh": "30s",
@@ -10,10 +14,18 @@
         "id": 1,
         "title": "Request Rate (req/s)",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
         "targets": [
           {
-            "datasource": {"type": "prometheus", "uid": "vm"},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${ds_vm}"
+            },
             "expr": "sum(rate(http_requests_total{namespace=\"demo-app\"}[5m])) by (endpoint)",
             "legendFormat": "{{endpoint}}",
             "refId": "A"
@@ -22,7 +34,10 @@
         "fieldConfig": {
           "defaults": {
             "unit": "reqps",
-            "custom": {"drawStyle": "line", "fillOpacity": 10}
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 10
+            }
           }
         }
       },
@@ -30,10 +45,18 @@
         "id": 2,
         "title": "Error Rate (%)",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
         "targets": [
           {
-            "datasource": {"type": "prometheus", "uid": "vm"},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${ds_vm}"
+            },
             "expr": "sum(rate(http_requests_total{namespace=\"demo-app\",status=\"500\"}[5m])) / sum(rate(http_requests_total{namespace=\"demo-app\"}[5m])) * 100",
             "legendFormat": "Error rate",
             "refId": "A"
@@ -45,9 +68,18 @@
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"value": null, "color": "green"},
-                {"value": 1, "color": "yellow"},
-                {"value": 5, "color": "red"}
+                {
+                  "value": null,
+                  "color": "green"
+                },
+                {
+                  "value": 1,
+                  "color": "yellow"
+                },
+                {
+                  "value": 5,
+                  "color": "red"
+                }
               ]
             }
           }
@@ -57,106 +89,170 @@
         "id": 3,
         "title": "Latency (P50, P95, P99)",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
         "targets": [
           {
-            "datasource": {"type": "prometheus", "uid": "vm"},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${ds_vm}"
+            },
             "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{namespace=\"demo-app\"}[5m])) by (le))",
             "legendFormat": "P50",
             "refId": "A"
           },
           {
-            "datasource": {"type": "prometheus", "uid": "vm"},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${ds_vm}"
+            },
             "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"demo-app\"}[5m])) by (le))",
             "legendFormat": "P95",
             "refId": "B"
           },
           {
-            "datasource": {"type": "prometheus", "uid": "vm"},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${ds_vm}"
+            },
             "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace=\"demo-app\"}[5m])) by (le))",
             "legendFormat": "P99",
             "refId": "C"
           }
         ],
         "fieldConfig": {
-          "defaults": {"unit": "s"}
+          "defaults": {
+            "unit": "s"
+          }
         }
       },
       {
         "id": 4,
         "title": "Active Pods",
         "type": "stat",
-        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 8
+        },
         "targets": [
           {
-            "datasource": {"type": "prometheus", "uid": "vm"},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${ds_vm}"
+            },
             "expr": "count(kube_pod_status_phase{namespace=\"demo-app\",phase=\"Running\"})",
             "refId": "A"
           }
         ],
         "fieldConfig": {
-          "defaults": {"unit": "none"}
+          "defaults": {
+            "unit": "none"
+          }
         }
       },
       {
         "id": 5,
         "title": "Total Requests (24h)",
         "type": "stat",
-        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 8
+        },
         "targets": [
           {
-            "datasource": {"type": "prometheus", "uid": "vm"},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${ds_vm}"
+            },
             "expr": "sum(increase(http_requests_total{namespace=\"demo-app\"}[24h]))",
             "refId": "A"
           }
         ],
         "fieldConfig": {
-          "defaults": {"unit": "short"}
+          "defaults": {
+            "unit": "short"
+          }
         }
       },
       {
         "id": 6,
         "title": "CPU Usage",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        },
         "targets": [
           {
-            "datasource": {"type": "prometheus", "uid": "vm"},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${ds_vm}"
+            },
             "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"demo-app\",container!=\"\"}[5m])) by (pod)",
             "legendFormat": "{{pod}}",
             "refId": "A"
           }
         ],
         "fieldConfig": {
-          "defaults": {"unit": "short"}
+          "defaults": {
+            "unit": "short"
+          }
         }
       },
       {
         "id": 7,
         "title": "Memory Usage",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        },
         "targets": [
           {
-            "datasource": {"type": "prometheus", "uid": "vm"},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "${ds_vm}"
+            },
             "expr": "sum(container_memory_working_set_bytes{namespace=\"demo-app\",container!=\"\"}) by (pod) / 1024 / 1024",
             "legendFormat": "{{pod}}",
             "refId": "A"
           }
         ],
         "fieldConfig": {
-          "defaults": {"unit": "decmbytes"}
+          "defaults": {
+            "unit": "decmbytes"
+          }
         }
       },
       {
         "id": 8,
         "title": "Recent Error Logs",
         "type": "logs",
-        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 24},
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 24
+        },
         "targets": [
           {
-            "datasource": {"type": "loki", "uid": "victorialogs"},
-            "expr": "{namespace=\"demo-app\"} | level=\"error\"",
+            "datasource": {
+              "type": "victoriametrics-logs-datasource",
+              "uid": "${ds_logs}"
+            },
+            "expr": "{kubernetes_namespace_name=\"demo-app\"} level:i(\"error\")",
             "refId": "A"
           }
         ],
@@ -169,10 +265,18 @@
         "id": 9,
         "title": "Trace Service Graph",
         "type": "nodeGraph",
-        "gridPos": {"h": 12, "w": 24, "x": 0, "y": 34},
+        "gridPos": {
+          "h": 12,
+          "w": 24,
+          "x": 0,
+          "y": 34
+        },
         "targets": [
           {
-            "datasource": {"type": "tempo", "uid": "tempo"},
+            "datasource": {
+              "type": "tempo",
+              "uid": "${ds_tempo}"
+            },
             "queryType": "serviceMap",
             "refId": "A"
           }
@@ -182,18 +286,55 @@
     "templating": {
       "list": [
         {
+          "name": "ds_vm",
+          "label": "Metrics",
+          "type": "datasource",
+          "query": "prometheus",
+          "refresh": 1,
+          "hide": 0,
+          "current": {},
+          "regex": "/vm-shortterm/"
+        },
+        {
+          "name": "ds_tempo",
+          "label": "Traces",
+          "type": "datasource",
+          "query": "tempo",
+          "refresh": 1,
+          "hide": 0,
+          "current": {}
+        },
+        {
+          "name": "ds_logs",
+          "label": "Logs",
+          "type": "datasource",
+          "query": "victoriametrics-logs-datasource",
+          "refresh": 1,
+          "hide": 0,
+          "current": {}
+        },
+        {
           "name": "namespace",
           "type": "constant",
-          "current": {"value": "demo-app", "text": "demo-app"}
+          "current": {
+            "value": "demo-app",
+            "text": "demo-app"
+          }
         }
       ]
     },
-    "time": {"from": "now-1h", "to": "now"},
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
     "timepicker": {},
     "annotations": {
       "list": [
         {
-          "datasource": {"type": "prometheus", "uid": "vm"},
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_vm}"
+          },
           "enable": true,
           "expr": "ALERTS{namespace=\"demo-app\",alertstate=\"firing\"}",
           "iconColor": "red",
