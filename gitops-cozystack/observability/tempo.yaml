@@ -28,7 +28,7 @@ spec:
               memory: 1Gi
         persistence:
           enabled: true
-          storageClassName: linstor-lvm-r1
+          storageClassName: replicated
           size: 20Gi
         serviceMonitor:
           enabled: true
